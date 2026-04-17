@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solar Tracker Command Center</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="styles.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'cyber-dark': '#0a0e27',
+                        'cyber-blue': '#1a1f3a',
+                        'cyber-accent': '#2d3561',
+                        'solar-gold': '#FFD700',
+                        'neon-green': '#39FF14',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-cyber-dark text-gray-100 font-sans overflow-x-hidden">
+    
+    <!-- Header -->
+    <header class="glass-panel border-b border-solar-gold/20 px-6 py-4 sticky top-0 z-50">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-solar-gold to-orange-500 flex items-center justify-center animate-pulse-slow">
+                    <svg class="w-7 h-7 text-cyber-dark" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-solar-gold tracking-wider">SOLAR TRACKER</h1>
+                    <p class="text-xs text-gray-400">Command Center v2.0</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center space-x-6">
+                <div class="flex items-center space-x-2">
+                    <div class="w-2 h-2 rounded-full bg-neon-green animate-pulse"></div>
+                    <span class="text-sm text-gray-300">LIVE</span>
+                </div>
+                <div class="text-right">
+                    <div class="text-sm font-mono text-solar-gold" id="current-time">--:--:--</div>
+                    <div class="text-xs text-gray-400" id="current-date">---- -- --</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="flex h-[calc(100vh-80px)]">
+        
+        <!-- Sidebar Control Panel -->
+        <aside class="w-64 glass-panel border-r border-solar-gold/20 p-4 overflow-y-auto sidebar-scroll">
+            <h2 class="text-lg font-bold text-solar-gold mb-4 flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M5 4a1 1 0 00-2 0v7.268a2 2 0 000 3.464V16a1 1 0 102 0v-1.268a2 2 0 000-3.464V4zM11 4a1 1 0 10-2 0v1.268a2 2 0 000 3.464V16a1 1 0 102 0V8.732a2 2 0 000-3.464V4zM16 3a1 1 0 011 1v7.268a2 2 0 010 3.464V16a1 1 0 11-2 0v-1.268a2 2 0 010-3.464V4a1 1 0 011-1z"/>
+                </svg>
+                MÓDULOS
+            </h2>
+            
+            <div class="space-y-3">
+                <div class="module-toggle active" data-module="light-visualizer">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm">Light Visualizer</span>
+                        <div class="toggle-switch"></div>
+                    </div>
+                </div>
+                
+                <div class="module-toggle active" data-module="servo-telemetry">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm">Servo Telemetry</span>
+                        <div class="toggle-switch"></div>
+                    </div>
+                </div>
+                
+                <div class="module-toggle active" data-module="power-monitor">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm">Power Monitor</span>
+                        <div class="toggle-switch"></div>
+                    </div>
+                </div>
+                
+                <div class="module-toggle active" data-module="geo-context">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm">Geo Context</span>
+                        <div class="toggle-switch"></div>
+                    </div>
+                </div>
+                
+                <div class="module-toggle active" data-module="data-logs">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm">Data Logs</span>
+                        <div class="toggle-switch"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-8 pt-6 border-t border-gray-700">
+                <h3 class="text-sm font-bold text-gray-400 mb-3">ESTADÍSTICAS</h3>
+                <div class="space-y-3 text-xs">
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Uptime:</span>
+                        <span class="text-neon-green font-mono" id="uptime">00:00:00</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Paquetes:</span>
+                        <span class="text-solar-gold font-mono" id="packet-count">0</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Eficiencia:</span>
+                        <span class="text-neon-green font-mono" id="efficiency">---%</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-6">
+                <button class="w-full bg-gradient-to-r from-solar-gold to-orange-500 text-cyber-dark font-bold py-2 px-4 rounded-lg hover:shadow-lg hover:shadow-solar-gold/50 transition-all duration-300 text-sm">
+                    CAMBIAR VISTA
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 overflow-y-auto p-6 space-y-6 main-scroll">
+            
+            <!-- Vista A: Live Analytics Dashboard -->
+            <div id="view-analytics" class="space-y-6">
+                
+                <!-- Top Row: Light Visualizer + Servo Telemetry -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    
+                    <!-- 3D Light Visualizer -->
+                    <div class="glass-panel p-6 module-container fade-in" data-module="light-visualizer">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-xl font-bold text-solar-gold">LIGHT INTENSITY RADAR</h2>
+                            <div class="flex items-center space-x-2">
+                                <div class="w-2 h-2 rounded-full bg-neon-green animate-pulse"></div>
+                                <span class="text-xs text-gray-400">TRACKING</span>
+                            </div>
+                        </div>
+                        <div id="light-radar-chart"></div>
+                        <div class="grid grid-cols-2 gap-3 mt-4">
+                            <div class="bg-cyber-blue/50 rounded-lg p-3 border border-solar-gold/20">
+                                <div class="text-xs text-gray-400">TOP LEFT</div>
+                                <div class="text-lg font-mono text-solar-gold" id="ldr-tl">0</div>
+                            </div>
+                            <div class="bg-cyber-blue/50 rounded-lg p-3 border border-solar-gold/20">
+                                <div class="text-xs text-gray-400">TOP RIGHT</div>
+                                <div class="text-lg font-mono text-solar-gold" id="ldr-tr">0</div>
+                            </div>
+                            <div class="bg-cyber-blue/50 rounded-lg p-3 border border-solar-gold/20">
+                                <div class="text-xs text-gray-400">BOTTOM LEFT</div>
+                                <div class="text-lg font-mono text-solar-gold" id="ldr-bl">0</div>
+                            </div>
+                            <div class="bg-cyber-blue/50 rounded-lg p-3 border border-solar-gold/20">
+                                <div class="text-xs text-gray-400">BOTTOM RIGHT</div>
+                                <div class="text-lg font-mono text-solar-gold" id="ldr-br">0</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Servo Telemetry -->
+                    <div class="glass-panel p-6 module-container fade-in" data-module="servo-telemetry">
+                        <h2 class="text-xl font-bold text-solar-gold mb-4">SERVO TELEMETRY</h2>
+                        <div class="grid grid-cols-2 gap-6">
+                            <div>
+                                <div class="text-center mb-2">
+                                    <span class="text-sm text-gray-400">AZIMUTH</span>
+                                </div>
+                                <div id="azimuth-gauge"></div>
+                                <div class="text-center mt-2">
+                                    <span class="text-3xl font-mono text-solar-gold" id="azimuth-value">0°</span>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="text-center mb-2">
+                                    <span class="text-sm text-gray-400">ELEVATION</span>
+                                </div>
+                                <div id="elevation-gauge"></div>
+                                <div class="text-center mt-2">
+                                    <span class="text-3xl font-mono text-solar-gold" id="elevation-value">0°</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-6 bg-cyber-blue/50 rounded-lg p-4 border border-neon-green/20">
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-gray-400">Sun Position</span>
+                                <span class="text-xs text-neon-green">CALCULATED</span>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4 mt-2">
+                                <div>
+                                    <div class="text-xs text-gray-500">Az:</div>
+                                    <div class="text-lg font-mono text-neon-green" id="sun-azimuth">--°</div>
+                                </div>
+                                <div>
+                                    <div class="text-xs text-gray-500">El:</div>
+                                    <div class="text-lg font-mono text-neon-green" id="sun-elevation">--°</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Power Monitor -->
+                <div class="glass-panel p-6 module-container fade-in" data-module="power-monitor">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-xl font-bold text-solar-gold">POWER GENERATION MONITOR</h2>
+                        <div class="flex items-center space-x-4">
+                            <div class="text-right">
+                                <div class="text-xs text-gray-400">VOLTAGE</div>
+                                <div class="text-2xl font-mono text-neon-green" id="current-voltage">0.00V</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-xs text-gray-400">POWER</div>
+                                <div class="text-2xl font-mono text-solar-gold" id="current-power">0.00W</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="power-chart"></div>
+                </div>
+
+                <!-- Geo Context & Map -->
+                <div class="glass-panel p-6 module-container fade-in" data-module="geo-context">
+                    <h2 class="text-xl font-bold text-solar-gold mb-4">GEO CONTEXT</h2>
+                    <div id="map" class="rounded-lg overflow-hidden border border-solar-gold/30" style="height: 300px;"></div>
+                    <div class="mt-4 grid grid-cols-3 gap-4">
+                        <div class="bg-cyber-blue/50 rounded-lg p-3 border border-solar-gold/20">
+                            <div class="text-xs text-gray-400">LATITUDE</div>
+                            <div class="text-lg font-mono text-solar-gold" id="location-lat">--</div>
+                        </div>
+                        <div class="bg-cyber-blue/50 rounded-lg p-3 border border-solar-gold/20">
+                            <div class="text-xs text-gray-400">LONGITUDE</div>
+                            <div class="text-lg font-mono text-solar-gold" id="location-lng">--</div>
+                        </div>
+                        <div class="bg-cyber-blue/50 rounded-lg p-3 border border-solar-gold/20">
+                            <div class="text-xs text-gray-400">LOCATION</div>
+                            <div class="text-sm font-mono text-solar-gold truncate" id="location-name">--</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Data History Logs -->
+                <div class="glass-panel p-6 module-container fade-in" data-module="data-logs">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-xl font-bold text-solar-gold">DATA HISTORY</h2>
+                        <input type="text" id="log-search" placeholder="Buscar..." 
+                               class="bg-cyber-blue/50 border border-solar-gold/30 rounded-lg px-4 py-2 text-sm text-gray-300 focus:outline-none focus:border-solar-gold">
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="border-b border-solar-gold/30">
+                                <tr class="text-gray-400">
+                                    <th class="text-left py-2 px-3">TIMESTAMP</th>
+                                    <th class="text-right py-2 px-3">AZIMUTH</th>
+                                    <th class="text-right py-2 px-3">ELEVATION</th>
+                                    <th class="text-right py-2 px-3">VOLTAGE</th>
+                                    <th class="text-right py-2 px-3">POWER</th>
+                                    <th class="text-right py-2 px-3">AVG LDR</th>
+                                </tr>
+                            </thead>
+                            <tbody id="data-logs-body" class="font-mono text-xs">
+                                <!-- Logs will be inserted here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

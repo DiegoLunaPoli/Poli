@@ -1,0 +1,243 @@
+/* Glassmorphism Effects */
+.glass-panel {
+    background: rgba(26, 31, 58, 0.7);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 215, 0, 0.1);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+/* Custom Scrollbar */
+.sidebar-scroll::-webkit-scrollbar,
+.main-scroll::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-track,
+.main-scroll::-webkit-scrollbar-track {
+    background: rgba(26, 31, 58, 0.5);
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb,
+.main-scroll::-webkit-scrollbar-thumb {
+    background: rgba(255, 215, 0, 0.3);
+    border-radius: 3px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb:hover,
+.main-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 215, 0, 0.5);
+}
+
+/* Module Toggle Switch */
+.module-toggle {
+    padding: 12px;
+    border-radius: 8px;
+    background: rgba(45, 53, 97, 0.5);
+    border: 1px solid rgba(255, 215, 0, 0.2);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.module-toggle:hover {
+    background: rgba(45, 53, 97, 0.8);
+    border-color: rgba(255, 215, 0, 0.4);
+}
+
+.module-toggle.active {
+    border-color: rgba(57, 255, 20, 0.5);
+}
+
+.toggle-switch {
+    width: 40px;
+    height: 20px;
+    background: rgba(100, 100, 100, 0.5);
+    border-radius: 10px;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.toggle-switch::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #666;
+    top: 2px;
+    left: 2px;
+    transition: all 0.3s ease;
+}
+
+.module-toggle.active .toggle-switch {
+    background: rgba(57, 255, 20, 0.3);
+}
+
+.module-toggle.active .toggle-switch::after {
+    background: #39FF14;
+    left: 22px;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in {
+    animation: fadeIn 0.6s ease-out;
+}
+
+@keyframes pulse-slow {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}
+
+.animate-pulse-slow {
+    animation: pulse-slow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Module Container Transitions */
+.module-container {
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    transform-origin: top;
+}
+
+.module-container.hidden {
+    opacity: 0;
+    transform: scaleY(0);
+    height: 0;
+    padding: 0;
+    margin: 0;
+    overflow: hidden;
+}
+
+/* Glow Effects */
+.glow-gold {
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+}
+
+.glow-green {
+    box-shadow: 0 0 20px rgba(57, 255, 20, 0.5);
+}
+
+/* Data Table Styling */
+#data-logs-body tr {
+    border-bottom: 1px solid rgba(255, 215, 0, 0.1);
+    transition: all 0.2s ease;
+}
+
+#data-logs-body tr:hover {
+    background: rgba(255, 215, 0, 0.05);
+}
+
+#data-logs-body td {
+    padding: 12px;
+}
+
+/* Map Marker Pulse */
+@keyframes marker-pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 20px rgba(255, 215, 0, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(255, 215, 0, 0);
+    }
+}
+
+.marker-pulse {
+    animation: marker-pulse 2s infinite;
+}
+
+/* ApexCharts Custom Styling */
+.apexcharts-tooltip {
+    background: rgba(26, 31, 58, 0.95) !important;
+    border: 1px solid rgba(255, 215, 0, 0.3) !important;
+    color: #fff !important;
+}
+
+.apexcharts-tooltip-title {
+    background: rgba(255, 215, 0, 0.2) !important;
+    border-bottom: 1px solid rgba(255, 215, 0, 0.3) !important;
+}
+
+/* Leaflet Custom Styling */
+.leaflet-container {
+    background: #0a0e27 !important;
+}
+
+.leaflet-popup-content-wrapper {
+    background: rgba(26, 31, 58, 0.95);
+    color: #fff;
+    border: 1px solid rgba(255, 215, 0, 0.3);
+}
+
+.leaflet-popup-tip {
+    background: rgba(26, 31, 58, 0.95);
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    aside {
+        width: 200px;
+    }
+}
+
+@media (max-width: 768px) {
+    aside {
+        position: fixed;
+        left: -100%;
+        height: 100vh;
+        z-index: 100;
+        transition: left 0.3s ease;
+    }
+    
+    aside.open {
+        left: 0;
+    }
+}
+
+/* Loading Animation */
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.loading-spinner {
+    border: 3px solid rgba(255, 215, 0, 0.3);
+    border-top-color: #FFD700;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+}
+
+/* Cyber Grid Background */
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: 
+        linear-gradient(rgba(255, 215, 0, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 215, 0, 0.03) 1px, transparent 1px);
+    background-size: 50px 50px;
+    pointer-events: none;
+    z-index: -1;
+}

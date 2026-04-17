@@ -1,0 +1,269 @@
+
+╔═══════════════════════════════════════════════════════════════════════════╗
+║                                                                           ║
+║                    ███████╗ ██████╗ ██╗      █████╗ ██████╗              ║
+║                    ██╔════╝██╔═══██╗██║     ██╔══██╗██╔══██╗             ║
+║                    ███████╗██║   ██║██║     ███████║██████╔╝             ║
+║                    ╚════██║██║   ██║██║     ██╔══██║██╔══██╗             ║
+║                    ███████║╚██████╔╝███████╗██║  ██║██║  ██║             ║
+║                    ╚══════╝ ╚═════╝ ╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝             ║
+║                                                                           ║
+║              ████████╗██████╗  █████╗  ██████╗██╗  ██╗███████╗██████╗    ║
+║              ╚══██╔══╝██╔══██╗██╔══██╗██╔════╝██║ ██╔╝██╔════╝██╔══██╗   ║
+║                 ██║   ██████╔╝███████║██║     █████╔╝ █████╗  ██████╔╝   ║
+║                 ██║   ██╔══██╗██╔══██║██║     ██╔═██╗ ██╔══╝  ██╔══██╗   ║
+║                 ██║   ██║  ██║██║  ██║╚██████╗██║  ██╗███████╗██║  ██║   ║
+║                 ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝   ║
+║                                                                           ║
+║                    🌞 DASHBOARD IoT DE PRÓXIMA GENERACIÓN 🌞             ║
+║                                                                           ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+
+
+                              .-"""-.
+                             /       \
+                            |  O   O  |
+                            |    ^    |
+                             \  \_/  /
+                              '-...-'
+                                |||
+                               /|||\
+                              / ||| \
+                             /  |||  \
+                            /   |||   \
+                           /    |||    \
+                          /     |||     \
+                         /      |||      \
+                        /       |||       \
+                       /        |||        \
+                      /         |||         \
+                     /          |||          \
+                    /___________|||___________\
+                   |            |||            |
+                   |     SOLAR TRACKER ESP32   |
+                   |____________________________|
+
+
+╔═══════════════════════════════════════════════════════════════════════════╗
+║                                                                           ║
+║                        ¡BIENVENIDO AL PROYECTO!                          ║
+║                                                                           ║
+║  Este es un dashboard de monitoreo en tiempo real para sistemas de       ║
+║  Solar Tracker basados en ESP32, con diseño futurista tipo              ║
+║  "Command Center" espacial.                                              ║
+║                                                                           ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+
+
+┌───────────────────────────────────────────────────────────────────────────┐
+│                                                                           │
+│  🚀 INICIO RÁPIDO (3 PASOS)                                              │
+│                                                                           │
+│  1. npm install          ← Instalar dependencias                         │
+│  2. npm start            ← Iniciar servidor                              │
+│  3. http://localhost:3000 ← Abrir en navegador                           │
+│                                                                           │
+└───────────────────────────────────────────────────────────────────────────┘
+
+
+┌───────────────────────────────────────────────────────────────────────────┐
+│                                                                           │
+│  ✨ CARACTERÍSTICAS PRINCIPALES                                          │
+│                                                                           │
+│  🎨 Diseño Dark Futurist/Glassmorphic                                    │
+│  📊 Gráficos interactivos en tiempo real (ApexCharts)                    │
+│  🗺️  Mapa geolocalizado (Leaflet.js)                                     │
+│  ⚡ WebSocket para comunicación instantánea                              │
+│  💾 Base de datos SQLite para histórico                                  │
+│  📱 Diseño responsive (Desktop, Tablet, Mobile)                          │
+│  🔧 Sistema modular con toggles                                          │
+│  🔍 Búsqueda en tiempo real de logs                                      │
+│                                                                           │
+└───────────────────────────────────────────────────────────────────────────┘
+
+
+┌───────────────────────────────────────────────────────────────────────────┐
+│                                                                           │
+│  📊 VISUALIZACIONES INCLUIDAS                                            │
+│                                                                           │
+│  ┌─────────────────────┐  ┌─────────────────────┐                       │
+│  │  LIGHT INTENSITY    │  │  SERVO TELEMETRY    │                       │
+│  │      RADAR          │  │   Azimut + Elevación│                       │
+│  │   (4 LDRs)          │  │   (Gauges 0-360°)   │                       │
+│  └─────────────────────┘  └─────────────────────┘                       │
+│                                                                           │
+│  ┌───────────────────────────────────────────────┐                       │
+│  │         POWER GENERATION MONITOR              │                       │
+│  │    Voltaje (V) + Potencia (W) en tiempo real  │                       │
+│  └───────────────────────────────────────────────┘                       │
+│                                                                           │
+│  ┌─────────────────────┐  ┌─────────────────────┐                       │
+│  │    GEO CONTEXT      │  │    DATA HISTORY     │                       │
+│  │  Mapa interactivo   │  │  Tabla con búsqueda │                       │
+│  └─────────────────────┘  └─────────────────────┘                       │
+│                                                                           │
+└───────────────────────────────────────────────────────────────────────────┘
+
+
+┌───────────────────────────────────────────────────────────────────────────┐
+│                                                                           │
+│  🔧 STACK TECNOLÓGICO                                                    │
+│                                                                           │
+│  Frontend:                                                                │
+│    • HTML5 + Tailwind CSS                                                │
+│    • JavaScript Vanilla                                                  │
+│    • ApexCharts (gráficos)                                               │
+│    • Leaflet.js (mapas)                                                  │
+│    • Socket.io Client                                                    │
+│                                                                           │
+│  Backend:                                                                 │
+│    • Node.js + Express                                                   │
+│    • Socket.io Server                                                    │
+│    • SQLite (better-sqlite3)                                             │
+│                                                                           │
+└───────────────────────────────────────────────────────────────────────────┘
+
+
+┌───────────────────────────────────────────────────────────────────────────┐
+│                                                                           │
+│  📚 DOCUMENTACIÓN DISPONIBLE                                             │
+│                                                                           │
+│  📄 INICIO_RAPIDO.txt      → Resumen ejecutivo                           │
+│  📄 README.md              → Documentación completa                      │
+│  📄 INSTRUCCIONES.md       → Guía paso a paso                            │
+│  📄 ARQUITECTURA.md        → Documentación técnica                       │
+│  📄 ESP32_INTEGRATION.md   → Código para ESP32                           │
+│  📄 EJEMPLOS_USO.md        → Casos de uso prácticos                      │
+│  📄 config.example.js      → Configuración personalizable                │
+│                                                                           │
+└───────────────────────────────────────────────────────────────────────────┘
+
+
+┌───────────────────────────────────────────────────────────────────────────┐
+│                                                                           │
+│  🎯 COMANDOS DISPONIBLES                                                 │
+│                                                                           │
+│  npm install       → Instalar todas las dependencias                     │
+│  npm start         → Iniciar servidor en modo producción                 │
+│  npm run dev       → Iniciar con auto-reload (desarrollo)                │
+│  npm run verify    → Verificar instalación del sistema                   │
+│                                                                           │
+└───────────────────────────────────────────────────────────────────────────┘
+
+
+┌───────────────────────────────────────────────────────────────────────────┐
+│                                                                           │
+│  🔌 INTEGRACIÓN CON ESP32                                                │
+│                                                                           │
+│  El proyecto incluye:                                                     │
+│    ✓ Código completo para Arduino IDE                                    │
+│    ✓ Esquemas de conexión de hardware                                    │
+│    ✓ Algoritmo de tracking solar                                         │
+│    ✓ Comunicación HTTP/WebSocket                                         │
+│    ✓ Calibración de sensores                                             │
+│                                                                           │
+│  Lee ESP32_INTEGRATION.md para más detalles                              │
+│                                                                           │
+└───────────────────────────────────────────────────────────────────────────┘
+
+
+┌───────────────────────────────────────────────────────────────────────────┐
+│                                                                           │
+│  🎨 PALETA DE COLORES                                                    │
+│                                                                           │
+│  ████ Cyber Dark    #0a0e27  (Fondo principal)                           │
+│  ████ Cyber Blue    #1a1f3a  (Paneles)                                   │
+│  ████ Cyber Accent  #2d3561  (Elementos)                                 │
+│  ████ Solar Gold    #FFD700  (Acentos principales)                       │
+│  ████ Neon Green    #39FF14  (Datos en vivo)                             │
+│                                                                           │
+└───────────────────────────────────────────────────────────────────────────┘
+
+
+┌───────────────────────────────────────────────────────────────────────────┐
+│                                                                           │
+│  📊 DATOS SIMULADOS                                                      │
+│                                                                           │
+│  El servidor incluye un simulador realista que:                          │
+│    • Simula el movimiento del sol (este → oeste)                         │
+│    • Calcula intensidad de luz en cada LDR                               │
+│    • Implementa control proporcional para tracking                       │
+│    • Genera voltaje basado en alineación                                 │
+│    • Añade ruido aleatorio para realismo                                 │
+│    • Transmite datos cada 500ms vía WebSocket                            │
+│    • Guarda histórico en SQLite                                          │
+│                                                                           │
+└───────────────────────────────────────────────────────────────────────────┘
+
+
+┌───────────────────────────────────────────────────────────────────────────┐
+│                                                                           │
+│  🌐 ACCESO REMOTO                                                        │
+│                                                                           │
+│  Para acceder desde otros dispositivos en tu red:                        │
+│                                                                           │
+│  1. Encuentra tu IP local:                                               │
+│     Windows: ipconfig                                                    │
+│     Linux/Mac: ifconfig                                                  │
+│                                                                           │
+│  2. En el dispositivo remoto:                                            │
+│     http://[TU-IP]:3000                                                  │
+│     Ejemplo: http://192.168.1.100:3000                                   │
+│                                                                           │
+└───────────────────────────────────────────────────────────────────────────┘
+
+
+┌───────────────────────────────────────────────────────────────────────────┐
+│                                                                           │
+│  💡 TIPS PRO                                                             │
+│                                                                           │
+│  • Mantén la consola del navegador abierta (F12) para ver logs          │
+│  • Usa Chrome DevTools para inspeccionar mensajes WebSocket             │
+│  • Exporta datos desde SQLite para análisis externo                     │
+│  • Prueba en modo incógnito si ves datos cacheados                      │
+│  • Personaliza colores en index.html (tailwind.config)                  │
+│                                                                           │
+└───────────────────────────────────────────────────────────────────────────┘
+
+
+┌───────────────────────────────────────────────────────────────────────────┐
+│                                                                           │
+│  🎓 PRÓXIMOS PASOS                                                       │
+│                                                                           │
+│  1. ✅ Ejecuta npm install                                               │
+│  2. ✅ Ejecuta npm run verify (verificar instalación)                    │
+│  3. ✅ Ejecuta npm start                                                 │
+│  4. ✅ Abre http://localhost:3000                                        │
+│  5. ✅ Explora la interfaz y familiarízate                               │
+│  6. ✅ Lee ARQUITECTURA.md para entender el sistema                      │
+│  7. ✅ Revisa ESP32_INTEGRATION.md para hardware                         │
+│  8. ✅ Personaliza según tus necesidades                                 │
+│                                                                           │
+└───────────────────────────────────────────────────────────────────────────┘
+
+
+╔═══════════════════════════════════════════════════════════════════════════╗
+║                                                                           ║
+║                    🎉 ¡LISTO PARA DESPEGAR! 🚀                           ║
+║                                                                           ║
+║  Tu Command Center espacial está listo para monitorear tu Solar Tracker  ║
+║  con un diseño futurista que te hará sentir en una estación espacial.    ║
+║                                                                           ║
+║                      ¡Disfruta la experiencia! 🛸✨                       ║
+║                                                                           ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+
+
+                                    .--.
+                                   |o_o |
+                                   |:_/ |
+                                  //   \ \
+                                 (|     | )
+                                /'\_   _/`\
+                                \___)=(___/
+
+                        Desarrollado con ❤️ para IoT
+
+
+═══════════════════════════════════════════════════════════════════════════════
+

@@ -2,30 +2,37 @@ const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
 const path = require('path');
-const Database = require('better-sqlite3');
+const initSqlJs = require('sql.js');
 
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
 
-// Configuración de la base de datos SQLite
-const db = new Database('solar_tracker.db');
+// Base de datos en memoria con sql.js (puro JavaScript, sin compilación nativa)
+let db;
+initSqlJs().then((SQL) => {
+  db = new SQL.Database();
 
-// Crear tabla si no existe
-db.exec(`
-  CREATE TABLE IF NOT EXISTS sensor_data (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-    ldr_top_left REAL,
-    ldr_top_right REAL,
-    ldr_bottom_left REAL,
-    ldr_bottom_right REAL,
-    azimuth REAL,
-    elevation REAL,
-    voltage REAL,
-    power REAL
-  )
-`);
+  // Crear tabla si no existe
+  db.run(`
+    CREATE TABLE IF NOT EXISTS sensor_data (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+      ldr_top_left REAL,
+      ldr_top_right REAL,
+      ldr_bottom_left REAL,
+      ldr_bottom_right REAL,
+      azimuth REAL,
+      elevation REAL,
+      voltage REAL,
+      power REAL
+    )
+  `);
+
+  console.log('Base de datos SQLite (en memoria) inicializada');
+}).catch(err => {
+  console.error('Error inicializando base de datos:', err);
+});
 
 // Servir archivos estáticos
 app.use(express.static('public'));
@@ -37,9 +44,16 @@ app.get('/', (req, res) => {
 
 // API para obtener historial
 app.get('/api/history', (req, res) => {
+  if (!db) return res.json([]);
   const limit = parseInt(req.query.limit) || 100;
-  const stmt = db.prepare('SELECT * FROM sensor_data ORDER BY timestamp DESC LIMIT ?');
-  const data = stmt.all(limit);
+  const result = db.exec(`SELECT * FROM sensor_data ORDER BY timestamp DESC LIMIT ${limit}`);
+  if (!result.length) return res.json([]);
+  const { columns, values } = result[0];
+  const data = values.map(row => {
+    const obj = {};
+    columns.forEach((col, i) => { obj[col] = row[i]; });
+    return obj;
+  });
   res.json(data);
 });
 
@@ -170,22 +184,21 @@ setInterval(() => {
   const data = simulator.generateData();
   
   // Guardar en base de datos cada 10 lecturas (cada 5 segundos)
-  if (Math.random() > 0.8) {
-    const stmt = db.prepare(`
-      INSERT INTO sensor_data (ldr_top_left, ldr_top_right, ldr_bottom_left, ldr_bottom_right, 
+  if (db && Math.random() > 0.8) {
+    db.run(
+      `INSERT INTO sensor_data (ldr_top_left, ldr_top_right, ldr_bottom_left, ldr_bottom_right, 
                                azimuth, elevation, voltage, power)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-    
-    stmt.run(
-      data.ldr.topLeft,
-      data.ldr.topRight,
-      data.ldr.bottomLeft,
-      data.ldr.bottomRight,
-      data.azimuth,
-      data.elevation,
-      data.voltage,
-      data.power
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        data.ldr.topLeft,
+        data.ldr.topRight,
+        data.ldr.bottomLeft,
+        data.ldr.bottomRight,
+        data.azimuth,
+        data.elevation,
+        data.voltage,
+        data.power
+      ]
     );
   }
 
@@ -195,9 +208,9 @@ setInterval(() => {
 
 // Limpiar datos antiguos cada hora
 setInterval(() => {
-  const stmt = db.prepare('DELETE FROM sensor_data WHERE timestamp < datetime("now", "-24 hours")');
-  const result = stmt.run();
-  console.log(`Limpieza de BD: ${result.changes} registros eliminados`);
+  if (!db) return;
+  db.run('DELETE FROM sensor_data WHERE timestamp < datetime("now", "-24 hours")');
+  console.log('Limpieza de BD: registros antiguos eliminados');
 }, 3600000);
 
 const PORT = process.env.PORT || 3000;

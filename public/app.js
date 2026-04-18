@@ -60,12 +60,29 @@ class SolarTrackerDashboard {
     }
 
     setESP32Status(connected) {
+        // Indicador en sidebar
         const el = document.getElementById('esp32-status');
-        if (!el) return;
-        el.textContent   = connected ? '🟢 ESP32 Conectado' : '🔴 ESP32 Sin señal';
-        el.className     = connected
-            ? 'text-neon-green font-bold text-sm'
-            : 'text-red-400 font-bold text-sm animate-pulse';
+        if (el) {
+            el.textContent = connected ? '🟢 ESP32 Conectado' : '🔴 Sin señal';
+            el.className   = connected
+                ? 'text-neon-green font-bold text-sm'
+                : 'text-red-400 font-bold text-sm animate-pulse';
+        }
+
+        // Punto LIVE en el header
+        const dot   = document.getElementById('live-dot');
+        const label = document.getElementById('live-label');
+        if (dot && label) {
+            if (connected) {
+                dot.className     = 'w-2 h-2 rounded-full bg-neon-green animate-pulse';
+                label.textContent = 'LIVE';
+                label.className   = 'text-sm text-gray-300';
+            } else {
+                dot.className     = 'w-2 h-2 rounded-full bg-red-500 animate-pulse';
+                label.textContent = 'SIN SEÑAL';
+                label.className   = 'text-sm text-red-400';
+            }
+        }
     }
 
     initializeCharts() {

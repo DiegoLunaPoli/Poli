@@ -50,7 +50,22 @@ class SolarTrackerDashboard {
             this.packetCount++;
             this.updateDashboard(data);
             this.addToLogs(data);
+            this.setESP32Status(true);
         });
+
+        // Estado de conexión con el ESP32
+        this.socket.on('esp32-status', (status) => {
+            this.setESP32Status(status.connected);
+        });
+    }
+
+    setESP32Status(connected) {
+        const el = document.getElementById('esp32-status');
+        if (!el) return;
+        el.textContent   = connected ? '🟢 ESP32 Conectado' : '🔴 ESP32 Sin señal';
+        el.className     = connected
+            ? 'text-neon-green font-bold text-sm'
+            : 'text-red-400 font-bold text-sm animate-pulse';
     }
 
     initializeCharts() {

@@ -60,21 +60,15 @@ app.get('/api/history', (req, res) => {
 // Último dato recibido del ESP32 (para reconexiones)
 let lastSensorData = null;
 
-// Parsear JSON del cuerpo de las peticiones POST
-app.use(express.json());
+// ─── IP del ESP32 ──────────────────────────────────────────────────────────
+// Cambia esta IP si el ESP32 cambia de dirección en tu red
+const ESP32_URL = 'http://192.168.0.28/';
+const POLL_INTERVAL_MS = 1000; // Consultar al ESP32 cada 1 segundo
+// ───────────────────────────────────────────────────────────────────────────
 
-// ─── Endpoint que recibe datos del ESP32 ───────────────────────────────────
-// El ESP32 hace POST a http://<IP-PC>:3000/api/data con su JSON
-app.post('/api/data', (req, res) => {
-  const esp = req.body;
-
-  // Validación mínima
-  if (!esp.servo || !esp.ldr || !esp.panel) {
-    return res.status(400).json({ error: 'Formato de datos inválido' });
-  }
-
-  // Transformar al formato interno del dashboard
-  const data = {
+// Transforma el JSON del ESP32 al formato interno del dashboard
+function transformESP32Data(esp) {
+  return {
     timestamp: new Date().toISOString(),
     ldr: {
       topLeft:     esp.ldr.supIzq,
@@ -91,34 +85,82 @@ app.post('/api/data', (req, res) => {
       azimutConectado: esp.status ? esp.status.azimutConectado : 0
     }
   };
+}
 
-  lastSensorData = data;
+// ─── Polling al ESP32 ──────────────────────────────────────────────────────
+// El servidor consulta al ESP32 directamente, igual que hacía el código React
+async function fetchFromESP32() {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
 
-  // Guardar en base de datos
-  if (db) {
-    db.run(
-      `INSERT INTO sensor_data (ldr_top_left, ldr_top_right, ldr_bottom_left, ldr_bottom_right,
-                               azimuth, elevation, voltage, power)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        data.ldr.topLeft,
-        data.ldr.topRight,
-        data.ldr.bottomLeft,
-        data.ldr.bottomRight,
-        data.azimuth,
-        data.elevation,
-        data.voltage,
-        data.power
-      ]
-    );
+    const response = await fetch(ESP32_URL, {
+      signal: controller.signal,
+      cache: 'no-store'
+    });
+    clearTimeout(timeoutId);
+
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+    const esp = await response.json();
+
+    // Validación mínima de campos esperados
+    if (!esp.servo || !esp.ldr || !esp.panel) {
+      console.warn('⚠️  JSON del ESP32 incompleto:', esp);
+      return;
+    }
+
+    const data = transformESP32Data(esp);
+    lastSensorData = data;
+
+    // Guardar en base de datos
+    if (db) {
+      db.run(
+        `INSERT INTO sensor_data (ldr_top_left, ldr_top_right, ldr_bottom_left, ldr_bottom_right,
+                                 azimuth, elevation, voltage, power)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          data.ldr.topLeft,
+          data.ldr.topRight,
+          data.ldr.bottomLeft,
+          data.ldr.bottomRight,
+          data.azimuth,
+          data.elevation,
+          data.voltage,
+          data.power
+        ]
+      );
+    }
+
+    // Emitir a todos los clientes del dashboard
+    io.emit('sensor-data', data);
+
+    console.log(`📡 ESP32 → Az=${data.azimuth}° El=${data.elevation}° V=${data.voltage}V P=${data.power}W`);
+
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      console.warn('⏱️  Timeout: ESP32 no respondió');
+    } else {
+      console.warn(`❌ Error conectando al ESP32: ${err.message}`);
+    }
+    // Emitir evento de desconexión al dashboard
+    io.emit('esp32-status', { connected: false });
   }
+}
 
-  // Emitir a todos los clientes del dashboard en tiempo real
-  io.emit('sensor-data', data);
+// Iniciar polling cuando el servidor arranque
+setInterval(fetchFromESP32, POLL_INTERVAL_MS);
+fetchFromESP32(); // Primera consulta inmediata
 
-  console.log(`📡 Datos ESP32: Az=${data.azimuth}° El=${data.elevation}° V=${data.voltage}V P=${data.power}W`);
-  res.json({ ok: true });
+// ─── Endpoint manual (opcional) ───────────────────────────────────────────
+// Permite forzar una lectura desde el dashboard: GET /api/refresh
+app.get('/api/refresh', async (req, res) => {
+  await fetchFromESP32();
+  res.json(lastSensorData || { error: 'Sin datos aún' });
 });
+
+// Parsear JSON para otros endpoints
+app.use(express.json());
 
 // Conexión WebSocket
 io.on('connection', (socket) => {

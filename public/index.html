@@ -123,6 +123,24 @@
                 </div>
             </div>
 
+            <div class="mt-4 pt-4 border-t border-gray-700">
+                <h3 class="text-sm font-bold text-gray-400 mb-3">HARDWARE</h3>
+                <div class="space-y-2 text-xs">
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-400">ESP32:</span>
+                        <span id="esp32-status" class="text-red-400 font-bold animate-pulse">🔴 Sin señal</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-400">Servo Azimut:</span>
+                        <span id="azimut-status" class="text-gray-500">---</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-400">Corriente:</span>
+                        <span id="current-amperage" class="text-solar-gold font-mono">--- A</span>
+                    </div>
+                </div>
+            </div>
+
             <div class="mt-6">
                 <button class="w-full bg-gradient-to-r from-solar-gold to-orange-500 text-cyber-dark font-bold py-2 px-4 rounded-lg hover:shadow-lg hover:shadow-solar-gold/50 transition-all duration-300 text-sm">
                     CAMBIAR VISTA

@@ -316,7 +316,7 @@ class SolarTrackerDashboard {
         document.getElementById('azimuth-value').textContent = `${data.azimuth}°`;
         document.getElementById('elevation-value').textContent = `${data.elevation}°`;
 
-        // Update Sun Position
+        // Update Sun Position (solo si viene del simulador)
         if (data.sunPosition) {
             document.getElementById('sun-azimuth').textContent = `${data.sunPosition.azimuth}°`;
             document.getElementById('sun-elevation').textContent = `${data.sunPosition.elevation}°`;
@@ -325,6 +325,21 @@ class SolarTrackerDashboard {
         // Update Power Monitor
         document.getElementById('current-voltage').textContent = `${data.voltage.toFixed(2)}V`;
         document.getElementById('current-power').textContent = `${data.power.toFixed(2)}W`;
+
+        // Mostrar corriente si el elemento existe en el HTML
+        const currentEl = document.getElementById('current-amperage');
+        if (currentEl && data.current !== undefined) {
+            currentEl.textContent = `${data.current.toFixed(3)}A`;
+        }
+
+        // Mostrar estado del servo de azimut si el elemento existe
+        const azimutStatusEl = document.getElementById('azimut-status');
+        if (azimutStatusEl && data.status) {
+            azimutStatusEl.textContent = data.status.azimutConectado ? 'Conectado' : 'Desconectado';
+            azimutStatusEl.className = data.status.azimutConectado
+                ? 'text-neon-green font-bold'
+                : 'text-red-400 font-bold';
+        }
 
         // Add to data buffer
         const timestamp = new Date().getTime();
@@ -352,9 +367,9 @@ class SolarTrackerDashboard {
         // Update packet count
         document.getElementById('packet-count').textContent = this.packetCount;
 
-        // Calculate efficiency (simplified)
-        const maxPower = 45; // 18V * 2.5A
-        const efficiency = ((data.power / maxPower) * 100).toFixed(1);
+        // Eficiencia basada en potencia máxima real del panel (ajustar según tu panel)
+        const maxPower = 10; // Watts — cambia este valor al máximo de tu panel
+        const efficiency = Math.min(100, (data.power / maxPower) * 100).toFixed(1);
         document.getElementById('efficiency').textContent = `${efficiency}%`;
     }
 

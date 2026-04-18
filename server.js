@@ -57,136 +57,47 @@ app.get('/api/history', (req, res) => {
   res.json(data);
 });
 
-// Simulador de datos del ESP32
-class SolarTrackerSimulator {
-  constructor() {
-    this.time = 0;
-    this.azimuth = 90;
-    this.elevation = 45;
-    this.sunAzimuth = 90;
-    this.sunElevation = 30;
+// Último dato recibido del ESP32 (para reconexiones)
+let lastSensorData = null;
+
+// Parsear JSON del cuerpo de las peticiones POST
+app.use(express.json());
+
+// ─── Endpoint que recibe datos del ESP32 ───────────────────────────────────
+// El ESP32 hace POST a http://<IP-PC>:3000/api/data con su JSON
+app.post('/api/data', (req, res) => {
+  const esp = req.body;
+
+  // Validación mínima
+  if (!esp.servo || !esp.ldr || !esp.panel) {
+    return res.status(400).json({ error: 'Formato de datos inválido' });
   }
 
-  // Simula el movimiento del sol a lo largo del día
-  updateSunPosition() {
-    this.time += 0.5; // Incremento de tiempo
-    // El sol se mueve de este (90°) a oeste (270°) en azimut
-    this.sunAzimuth = 90 + (this.time * 0.5) % 180;
-    // Elevación varía en forma de parábola (amanecer -> mediodía -> atardecer)
-    const timeOfDay = (this.time % 360) / 360;
-    this.sunElevation = 60 * Math.sin(timeOfDay * Math.PI);
-    
-    if (this.sunElevation < 0) this.sunElevation = 0;
-  }
-
-  // Calcula la intensidad de luz en cada LDR basado en la posición del sol
-  calculateLDRValues() {
-    // Diferencia angular entre el tracker y el sol
-    const azimuthDiff = this.sunAzimuth - this.azimuth;
-    const elevationDiff = this.sunElevation - this.elevation;
-
-    // Intensidad base (0-1023 para simular ADC de 10 bits)
-    const baseIntensity = 900 * Math.max(0, Math.cos(elevationDiff * Math.PI / 180));
-
-    // Calcular intensidad para cada LDR
-    const topBias = elevationDiff > 0 ? 1.2 : 0.8;
-    const bottomBias = elevationDiff < 0 ? 1.2 : 0.8;
-    const leftBias = azimuthDiff < 0 ? 1.2 : 0.8;
-    const rightBias = azimuthDiff > 0 ? 1.2 : 0.8;
-
-    return {
-      topLeft: Math.min(1023, baseIntensity * topBias * leftBias + this.noise()),
-      topRight: Math.min(1023, baseIntensity * topBias * rightBias + this.noise()),
-      bottomLeft: Math.min(1023, baseIntensity * bottomBias * leftBias + this.noise()),
-      bottomRight: Math.min(1023, baseIntensity * bottomBias * rightBias + this.noise())
-    };
-  }
-
-  // Ruido aleatorio para simular variaciones
-  noise() {
-    return (Math.random() - 0.5) * 30;
-  }
-
-  // Actualiza la posición del tracker (simula el control PID)
-  updateTrackerPosition(ldrValues) {
-    const verticalDiff = (ldrValues.topLeft + ldrValues.topRight) - 
-                        (ldrValues.bottomLeft + ldrValues.bottomRight);
-    const horizontalDiff = (ldrValues.topLeft + ldrValues.bottomLeft) - 
-                          (ldrValues.topRight + ldrValues.bottomRight);
-
-    // Ajuste proporcional simple
-    const threshold = 50;
-    if (Math.abs(verticalDiff) > threshold) {
-      this.elevation += verticalDiff > 0 ? 0.5 : -0.5;
-      this.elevation = Math.max(0, Math.min(90, this.elevation));
+  // Transformar al formato interno del dashboard
+  const data = {
+    timestamp: new Date().toISOString(),
+    ldr: {
+      topLeft:     esp.ldr.supIzq,
+      topRight:    esp.ldr.supDer,
+      bottomLeft:  esp.ldr.infIzq,
+      bottomRight: esp.ldr.infDer
+    },
+    azimuth:   esp.servo.azimut,
+    elevation: esp.servo.inclinacion,
+    voltage:   esp.panel.voltaje,
+    current:   esp.panel.corriente,
+    power:     esp.panel.potencia,
+    status: {
+      azimutConectado: esp.status ? esp.status.azimutConectado : 0
     }
+  };
 
-    if (Math.abs(horizontalDiff) > threshold) {
-      this.azimuth += horizontalDiff > 0 ? 0.5 : -0.5;
-      this.azimuth = (this.azimuth + 360) % 360;
-    }
-  }
+  lastSensorData = data;
 
-  // Calcula el voltaje generado basado en la alineación con el sol
-  calculateVoltage(ldrValues) {
-    const avgIntensity = (ldrValues.topLeft + ldrValues.topRight + 
-                         ldrValues.bottomLeft + ldrValues.bottomRight) / 4;
-    // Voltaje entre 0V y 18V (panel solar típico)
-    const voltage = (avgIntensity / 1023) * 18;
-    return voltage + (Math.random() - 0.5) * 0.5; // Pequeña variación
-  }
-
-  // Genera un paquete de datos completo
-  generateData() {
-    this.updateSunPosition();
-    const ldrValues = this.calculateLDRValues();
-    this.updateTrackerPosition(ldrValues);
-    const voltage = this.calculateVoltage(ldrValues);
-    const power = voltage * 2.5; // Asumiendo ~2.5A de corriente
-
-    return {
-      timestamp: new Date().toISOString(),
-      ldr: ldrValues,
-      azimuth: Math.round(this.azimuth * 10) / 10,
-      elevation: Math.round(this.elevation * 10) / 10,
-      voltage: Math.round(voltage * 100) / 100,
-      power: Math.round(power * 100) / 100,
-      sunPosition: {
-        azimuth: Math.round(this.sunAzimuth * 10) / 10,
-        elevation: Math.round(this.sunElevation * 10) / 10
-      }
-    };
-  }
-}
-
-const simulator = new SolarTrackerSimulator();
-
-// Conexión WebSocket
-io.on('connection', (socket) => {
-  console.log('Cliente conectado:', socket.id);
-
-  // Enviar datos iniciales
-  socket.emit('initial-data', {
-    location: {
-      lat: 4.7110,
-      lng: -74.0721,
-      name: 'Bogotá, Colombia'
-    }
-  });
-
-  socket.on('disconnect', () => {
-    console.log('Cliente desconectado:', socket.id);
-  });
-});
-
-// Simulación de datos cada 500ms
-setInterval(() => {
-  const data = simulator.generateData();
-  
-  // Guardar en base de datos cada 10 lecturas (cada 5 segundos)
-  if (db && Math.random() > 0.8) {
+  // Guardar en base de datos
+  if (db) {
     db.run(
-      `INSERT INTO sensor_data (ldr_top_left, ldr_top_right, ldr_bottom_left, ldr_bottom_right, 
+      `INSERT INTO sensor_data (ldr_top_left, ldr_top_right, ldr_bottom_left, ldr_bottom_right,
                                azimuth, elevation, voltage, power)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [
@@ -202,9 +113,35 @@ setInterval(() => {
     );
   }
 
-  // Emitir datos a todos los clientes conectados
+  // Emitir a todos los clientes del dashboard en tiempo real
   io.emit('sensor-data', data);
-}, 500);
+
+  console.log(`📡 Datos ESP32: Az=${data.azimuth}° El=${data.elevation}° V=${data.voltage}V P=${data.power}W`);
+  res.json({ ok: true });
+});
+
+// Conexión WebSocket
+io.on('connection', (socket) => {
+  console.log('Cliente conectado:', socket.id);
+
+  // Enviar datos iniciales de ubicación
+  socket.emit('initial-data', {
+    location: {
+      lat: 4.7110,
+      lng: -74.0721,
+      name: 'Bogotá, Colombia'
+    }
+  });
+
+  // Si ya hay datos, enviarlos inmediatamente al nuevo cliente
+  if (lastSensorData) {
+    socket.emit('sensor-data', lastSensorData);
+  }
+
+  socket.on('disconnect', () => {
+    console.log('Cliente desconectado:', socket.id);
+  });
+});
 
 // Limpiar datos antiguos cada hora
 setInterval(() => {

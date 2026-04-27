@@ -5,6 +5,7 @@ class SolarTrackerDashboard {
         this.charts = {};
         this.dataBuffer = {
             voltage: [],
+            current: [],
             power: [],
             timestamps: []
         };
@@ -89,7 +90,7 @@ class SolarTrackerDashboard {
         // Light Intensity Radar Chart
         const radarOptions = {
             series: [{
-                name: 'Light Intensity',
+                name: 'Intensidad de Luz (%)',
                 data: [0, 0, 0, 0]
             }],
             chart: {
@@ -106,7 +107,7 @@ class SolarTrackerDashboard {
                 }
             },
             xaxis: {
-                categories: ['Top Left', 'Top Right', 'Bottom Right', 'Bottom Left'],
+                categories: ['Sup. Izquierdo', 'Sup. Derecho', 'Inf. Derecho', 'Inf. Izquierdo'],
                 labels: {
                     style: {
                         colors: ['#FFD700', '#FFD700', '#FFD700', '#FFD700'],
@@ -116,12 +117,14 @@ class SolarTrackerDashboard {
             },
             yaxis: {
                 show: true,
-                max: 1023,
+                min: 0,
+                max: 100,
                 labels: {
                     style: {
                         colors: '#9CA3AF',
                         fontSize: '10px'
-                    }
+                    },
+                    formatter: (val) => `${val}%`
                 }
             },
             fill: {
@@ -192,10 +195,8 @@ class SolarTrackerDashboard {
                     stops: [0, 100]
                 }
             },
-            stroke: {
-                lineCap: 'round'
-            },
-            labels: ['Azimuth']
+            stroke: { lineCap: 'round' },
+            labels: ['Azimut']
         };
 
         this.charts.azimuth = new ApexCharts(
@@ -219,14 +220,9 @@ class SolarTrackerDashboard {
         // Power Monitor Chart
         const powerOptions = {
             series: [
-                {
-                    name: 'Voltage (V)',
-                    data: []
-                },
-                {
-                    name: 'Power (W)',
-                    data: []
-                }
+                { name: 'Voltaje (V)', data: [] },
+                { name: 'Corriente (A)', data: [] },
+                { name: 'Potencia (W)', data: [] }
             ],
             chart: {
                 height: 300,
@@ -263,34 +259,45 @@ class SolarTrackerDashboard {
             },
             yaxis: [
                 {
+                    min: 0,
+                    max: 16,
                     title: {
-                        text: 'Voltage (V)',
-                        style: {
-                            color: '#39FF14'
-                        }
+                        text: 'Voltaje (V)',
+                        style: { color: '#39FF14' }
                     },
                     labels: {
-                        style: {
-                            colors: '#39FF14'
-                        }
+                        style: { colors: '#39FF14' },
+                        formatter: (val) => val.toFixed(1)
                     }
                 },
                 {
                     opposite: true,
+                    min: 0,
+                    max: 0.4,
                     title: {
-                        text: 'Power (W)',
-                        style: {
-                            color: '#FFD700'
-                        }
+                        text: 'Corriente (A)',
+                        style: { color: '#60A5FA' }
                     },
                     labels: {
-                        style: {
-                            colors: '#FFD700'
-                        }
+                        style: { colors: '#60A5FA' },
+                        formatter: (val) => val.toFixed(3)
+                    }
+                },
+                {
+                    opposite: true,
+                    min: 0,
+                    max: 4,
+                    title: {
+                        text: 'Potencia (W)',
+                        style: { color: '#FFD700' }
+                    },
+                    labels: {
+                        style: { colors: '#FFD700' },
+                        formatter: (val) => val.toFixed(2)
                     }
                 }
             ],
-            colors: ['#39FF14', '#FFD700'],
+            colors: ['#39FF14', '#60A5FA', '#FFD700'],
             fill: {
                 type: 'gradient',
                 gradient: {
@@ -300,17 +307,9 @@ class SolarTrackerDashboard {
                     stops: [0, 90, 100]
                 }
             },
-            theme: {
-                mode: 'dark'
-            },
-            grid: {
-                borderColor: 'rgba(255, 215, 0, 0.2)'
-            },
-            legend: {
-                labels: {
-                    colors: '#9CA3AF'
-                }
-            }
+            theme: { mode: 'dark' },
+            grid: { borderColor: 'rgba(255, 215, 0, 0.2)' },
+            legend: { labels: { colors: '#9CA3AF' } }
         };
 
         this.charts.power = new ApexCharts(
@@ -321,15 +320,15 @@ class SolarTrackerDashboard {
     }
 
     updateDashboard(data) {
-        // Update LDR values
-        document.getElementById('ldr-tl').textContent = Math.round(data.ldr.topLeft);
-        document.getElementById('ldr-tr').textContent = Math.round(data.ldr.topRight);
-        document.getElementById('ldr-bl').textContent = Math.round(data.ldr.bottomLeft);
-        document.getElementById('ldr-br').textContent = Math.round(data.ldr.bottomRight);
+        // ── LDR — campos que envía server.js: topLeft, topRight, bottomLeft, bottomRight ──
+        document.getElementById('ldr-tl').textContent = `${Math.round(data.ldr.topLeft)}%`;
+        document.getElementById('ldr-tr').textContent = `${Math.round(data.ldr.topRight)}%`;
+        document.getElementById('ldr-bl').textContent = `${Math.round(data.ldr.bottomLeft)}%`;
+        document.getElementById('ldr-br').textContent = `${Math.round(data.ldr.bottomRight)}%`;
 
         // Update Radar Chart
         this.charts.radar.updateSeries([{
-            name: 'Light Intensity',
+            name: 'Intensidad de Luz (%)',
             data: [
                 Math.round(data.ldr.topLeft),
                 Math.round(data.ldr.topRight),
@@ -338,23 +337,23 @@ class SolarTrackerDashboard {
             ]
         }]);
 
-        // Update Servo Telemetry
-        const azimuthPercent = (data.azimuth / 360) * 100;
-        const elevationPercent = (data.elevation / 90) * 100;
-        
+        // ── Servo Telemetría ──
+        const azimuthPercent   = (data.azimuth  / 180) * 100;
+        const elevationPercent = (data.elevation /  65) * 100;  // máx físico calibrado: 65°
+
         this.charts.azimuth.updateSeries([azimuthPercent]);
         this.charts.elevation.updateSeries([elevationPercent]);
         
         document.getElementById('azimuth-value').textContent = `${data.azimuth}°`;
         document.getElementById('elevation-value').textContent = `${data.elevation}°`;
 
-        // Update Sun Position (solo si viene del simulador)
+        // ── Posición solar (solo si viene del simulador) ──
         if (data.sunPosition) {
             document.getElementById('sun-azimuth').textContent = `${data.sunPosition.azimuth}°`;
             document.getElementById('sun-elevation').textContent = `${data.sunPosition.elevation}°`;
         }
 
-        // Update Power Monitor
+        // ── Panel ──
         document.getElementById('current-voltage').textContent = `${data.voltage.toFixed(2)}V`;
         document.getElementById('current-power').textContent = `${data.power.toFixed(2)}W`;
 
@@ -364,7 +363,7 @@ class SolarTrackerDashboard {
             currentEl.textContent = `${data.current.toFixed(3)}A`;
         }
 
-        // Mostrar estado del servo de azimut si el elemento existe
+        // ── Estado azimut ──
         const azimutStatusEl = document.getElementById('azimut-status');
         if (azimutStatusEl && data.status) {
             azimutStatusEl.textContent = data.status.azimutConectado ? 'Conectado' : 'Desconectado';
@@ -373,34 +372,30 @@ class SolarTrackerDashboard {
                 : 'text-red-400 font-bold';
         }
 
-        // Add to data buffer
+        // ── Gráfica de potencia ──
         const timestamp = new Date().getTime();
         this.dataBuffer.voltage.push({ x: timestamp, y: data.voltage });
-        this.dataBuffer.power.push({ x: timestamp, y: data.power });
+        this.dataBuffer.current.push({ x: timestamp, y: data.current !== undefined ? data.current : 0 });
+        this.dataBuffer.power.push({   x: timestamp, y: data.power   });
 
         // Keep only last N points
         if (this.dataBuffer.voltage.length > this.maxDataPoints) {
             this.dataBuffer.voltage.shift();
+            this.dataBuffer.current.shift();
             this.dataBuffer.power.shift();
         }
 
         // Update Power Chart
         this.charts.power.updateSeries([
-            {
-                name: 'Voltage (V)',
-                data: this.dataBuffer.voltage
-            },
-            {
-                name: 'Power (W)',
-                data: this.dataBuffer.power
-            }
+            { name: 'Voltaje (V)',    data: this.dataBuffer.voltage },
+            { name: 'Corriente (A)', data: this.dataBuffer.current },
+            { name: 'Potencia (W)',  data: this.dataBuffer.power   }
         ]);
 
-        // Update packet count
+        // ── Contadores ──
         document.getElementById('packet-count').textContent = this.packetCount;
 
-        // Eficiencia basada en potencia máxima real del panel (ajustar según tu panel)
-        const maxPower = 10; // Watts — cambia este valor al máximo de tu panel
+        const maxPower = 3.6; // Potencia máxima teórica del panel: 12V × 300mA = 3.6W
         const efficiency = Math.min(100, (data.power / maxPower) * 100).toFixed(1);
         document.getElementById('efficiency').textContent = `${efficiency}%`;
     }
@@ -444,6 +439,7 @@ class SolarTrackerDashboard {
     }
 
     addToLogs(data) {
+        // Usa los mismos campos que server.js emite
         const avgLDR = (
             data.ldr.topLeft + 
             data.ldr.topRight + 
@@ -455,9 +451,10 @@ class SolarTrackerDashboard {
             timestamp: new Date().toLocaleTimeString(),
             azimuth: data.azimuth,
             elevation: data.elevation,
-            voltage: data.voltage,
-            power: data.power,
-            avgLDR: Math.round(avgLDR)
+            voltage:   data.voltage,
+            current:   data.current !== undefined ? data.current : 0,
+            power:     data.power,
+            avgLDR:    Math.round(avgLDR)
         };
 
         this.logData.unshift(logEntry);
@@ -484,8 +481,9 @@ class SolarTrackerDashboard {
                 <td class="py-2 px-3 text-right text-solar-gold">${log.azimuth}°</td>
                 <td class="py-2 px-3 text-right text-solar-gold">${log.elevation}°</td>
                 <td class="py-2 px-3 text-right text-neon-green">${log.voltage.toFixed(2)}V</td>
+                <td class="py-2 px-3 text-right text-blue-400">${log.current.toFixed(3)}A</td>
                 <td class="py-2 px-3 text-right text-solar-gold">${log.power.toFixed(2)}W</td>
-                <td class="py-2 px-3 text-right text-gray-400">${log.avgLDR}</td>
+                <td class="py-2 px-3 text-right text-gray-400">${log.avgLDR}%</td>
             </tr>
         `).join('');
     }
@@ -517,11 +515,9 @@ class SolarTrackerDashboard {
 
     updateClock() {
         const now = new Date();
-        const timeStr = now.toLocaleTimeString('es-ES', { hour12: false });
-        const dateStr = now.toLocaleDateString('es-ES', { 
-            year: 'numeric', 
-            month: 'short', 
-            day: 'numeric' 
+        document.getElementById('current-time').textContent = now.toLocaleTimeString('es-ES', { hour12: false });
+        document.getElementById('current-date').textContent = now.toLocaleDateString('es-ES', {
+            year: 'numeric', month: 'short', day: 'numeric'
         });
         
         document.getElementById('current-time').textContent = timeStr;
@@ -530,12 +526,11 @@ class SolarTrackerDashboard {
 
     updateUptime() {
         const elapsed = Date.now() - this.startTime;
-        const hours = Math.floor(elapsed / 3600000);
-        const minutes = Math.floor((elapsed % 3600000) / 60000);
-        const seconds = Math.floor((elapsed % 60000) / 1000);
-        
-        const uptimeStr = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-        document.getElementById('uptime').textContent = uptimeStr;
+        const h = Math.floor(elapsed / 3600000);
+        const m = Math.floor((elapsed % 3600000) / 60000);
+        const s = Math.floor((elapsed % 60000) / 1000);
+        document.getElementById('uptime').textContent =
+            `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
     }
 
     async loadHistoricalData() {
@@ -544,6 +539,7 @@ class SolarTrackerDashboard {
             const data = await response.json();
             
             data.reverse().forEach(record => {
+                // La BD guarda: ldr_top_left, ldr_top_right, ldr_bottom_left, ldr_bottom_right
                 const logEntry = {
                     timestamp: new Date(record.timestamp).toLocaleTimeString(),
                     azimuth: record.azimuth,

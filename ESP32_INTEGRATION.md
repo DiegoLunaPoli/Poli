@@ -69,9 +69,9 @@ Instala desde Library Manager:
 #include <ArduinoJson.h>
 
 // ========== CONFIGURACIÓN ==========
-const char* ssid = "TU_WIFI_SSID";
-const char* password = "TU_WIFI_PASSWORD";
-const char* serverUrl = "http://192.168.1.100:3000/api/sensor-data"; // Cambiar IP
+const char* ssid = "FAMILIA_BERNAL_";
+const char* password = "Sm4rtH0m3";
+const char* serverUrl = "http://192.168.0.28:80/api/sensor-data"; // Cambiar IP
 
 // Pines de LDR (ADC)
 const int LDR_TOP_LEFT = 34;

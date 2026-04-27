@@ -7,6 +7,22 @@ const initSqlJs = require('sql.js');
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
+const os = require('os');
+
+// Función para obtener la IP local del servidor
+function obtenerIPLocal() {
+  const interfaces = os.networkInterfaces();
+  for (const nombre of Object.values(interfaces)) {
+    for (const iface of nombre) {
+      if (iface.family === 'IPv4' && !iface.internal) {
+        return iface.address;
+      }
+    }
+  }
+  return '0.0.0.0';
+}
+
+const HOST = obtenerIPLocal();
 
 // Base de datos en memoria con sql.js (puro JavaScript, sin compilación nativa)
 let db;
@@ -193,7 +209,8 @@ setInterval(() => {
 }, 3600000);
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`🚀 Servidor Solar Tracker Dashboard ejecutándose en http://localhost:${PORT}`);
+server.listen(PORT, HOST, () => {
+  console.log(`🚀 Servidor corriendo en http://${HOST}:${PORT}`);
+  console.log(`📡 Usa esta URL en el ESP32: http://${HOST}:${PORT}/api/data`);
   console.log(`📡 WebSocket activo - Transmitiendo datos cada 500ms`);
 });

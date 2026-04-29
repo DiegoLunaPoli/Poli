@@ -17,18 +17,17 @@ app.use(express.static('public'));
 // ─── Variables de entorno ───────────────────────────────────────────────────
 const PORT           = process.env.PORT || 3000;
 const ESP32_URL      = process.env.ESP32_URL      || 'http://192.168.0.28/';
-const POLL_INTERVAL  = parseInt(process.env.POLL_INTERVAL_MS) || 1000;
+const POLL_INTERVAL  = parseInt(process.env.POLL_INTERVAL_MS) || 1800000; // 30 min por defecto
 const MONGODB_URI    = process.env.MONGODB_URI;   // Obligatoria en producción
 const DB_NAME        = process.env.DB_NAME        || 'solar_tracker';
 const COLLECTION     = process.env.COLLECTION     || 'sensor_data';
-const RETENTION_HRS  = parseInt(process.env.RETENTION_HRS) || 24;
 
 // ─── MongoDB ────────────────────────────────────────────────────────────────
 let dbCollection = null;
 
 async function connectDB() {
   if (!MONGODB_URI) {
-    console.warn('MONGODB_URI no definida — los datos NO se persistirán.');
+    console.warn('⚠️  MONGODB_URI no definida — los datos NO se persistirán.');
     return;
   }
 
@@ -44,18 +43,12 @@ async function connectDB() {
     const db = client.db(DB_NAME);
     dbCollection = db.collection(COLLECTION);
 
-    // Índice TTL: borra documentos con más de RETENTION_HRS horas
-    await dbCollection.createIndex(
-      { timestamp: 1 },
-      { expireAfterSeconds: RETENTION_HRS * 3600 }
-    );
-
-    // Índice para queries de historial
+    // Índice para queries de historial (descendente por timestamp)
     await dbCollection.createIndex({ timestamp: -1 });
 
-    console.log(`MongoDB conectado → ${DB_NAME}.${COLLECTION}`);
+    console.log(`✅ MongoDB conectado → ${DB_NAME}.${COLLECTION}`);
   } catch (err) {
-    console.error('Error conectando a MongoDB:', err.message);
+    console.error('❌ Error conectando a MongoDB:', err.message);
     // No lanzar: la app sigue funcionando sin persistencia
   }
 }
@@ -87,14 +80,17 @@ async function saveReading(data) {
   try {
     await dbCollection.insertOne(data);
   } catch (err) {
-    console.error('Error guardando en DB:', err.message);
+    console.error('❌ Error guardando en DB:', err.message);
   }
 }
 
 // ─── Polling al ESP32 ────────────────────────────────────────────────────────
+// fetchFromESP32  → consulta el ESP32 y emite por WebSocket (cada 1 segundo)
+// saveReading     → se llama por separado cada POLL_INTERVAL (30 min por defecto)
+
 let lastSensorData = null;
 
-async function fetchFromESP32() {
+async function fetchFromESP32(persist = false) {
   try {
     const controller = new AbortController();
     const timeoutId  = setTimeout(() => controller.abort(), 5000);
@@ -110,27 +106,31 @@ async function fetchFromESP32() {
     const esp = await response.json();
 
     if (!esp.servo || !esp.ldr || !esp.panel) {
-      console.warn('JSON del ESP32 incompleto:', esp);
+      console.warn('⚠️  JSON del ESP32 incompleto:', esp);
       return;
     }
 
-    const data    = transformESP32Data(esp);
+    const data     = transformESP32Data(esp);
     lastSensorData = data;
 
-    await saveReading(data);
+    // Solo persiste cuando se llama con persist=true (cada 30 min)
+    if (persist) {
+      await saveReading(data);
+      console.log(`💾 Guardado en DB → Az=${data.azimuth}° El=${data.elevation}° V=${data.voltage}V P=${data.power}W`);
+    }
 
     io.emit('sensor-data', {
       ...data,
       timestamp: data.timestamp.toISOString(),
     });
 
-    console.log(`ESP32 → Az=${data.azimuth}° El=${data.elevation}° V=${data.voltage}V P=${data.power}W`);
+    console.log(`📡 ESP32 → Az=${data.azimuth}° El=${data.elevation}° V=${data.voltage}V P=${data.power}W`);
 
   } catch (err) {
     if (err.name === 'AbortError') {
-      console.warn('Timeout: ESP32 no respondió');
+      console.warn('⏱️  Timeout: ESP32 no respondió');
     } else {
-      console.warn(`Error conectando al ESP32: ${err.message}`);
+      console.warn(`❌ Error conectando al ESP32: ${err.message}`);
     }
     io.emit('esp32-status', { connected: false });
   }
@@ -158,7 +158,7 @@ app.get('/api/history', async (req, res) => {
 
     res.json(docs);
   } catch (err) {
-    console.error('Error leyendo historial:', err.message);
+    console.error('❌ Error leyendo historial:', err.message);
     res.status(500).json({ error: 'Error al obtener historial' });
   }
 });
@@ -210,14 +210,20 @@ io.on('connection', (socket) => {
 async function start() {
   await connectDB();
 
-  setInterval(fetchFromESP32, POLL_INTERVAL);
-  fetchFromESP32();
+  // Tiempo real: consulta el ESP32 cada 1 segundo y emite por WebSocket
+  setInterval(() => fetchFromESP32(false), 1000);
 
-  // Escuchar en 0.0.0.0 para que Azure pueda enrutar el tráfico
+  // Persistencia: guarda en MongoDB cada POLL_INTERVAL (30 min por defecto)
+  setInterval(() => fetchFromESP32(true), POLL_INTERVAL);
+
+  // Primera ejecución inmediata (persiste también el primer dato)
+  fetchFromESP32(true);
+
   server.listen(PORT, '0.0.0.0', () => {
-    console.log(`Servidor corriendo en http://0.0.0.0:${PORT}`);
-    console.log(`Polling al ESP32 cada ${POLL_INTERVAL}ms → ${ESP32_URL}`);
-    console.log(`BD: ${dbCollection ? 'MongoDB activo' : 'Sin persistencia'}`);
+    console.log(`🚀 Servidor corriendo en http://0.0.0.0:${PORT}`);
+    console.log(`📡 WebSocket: actualizando dashboard cada 1s`);
+    console.log(`💾 Persistencia en DB cada ${POLL_INTERVAL / 60000} minutos`);
+    console.log(`🗄️  BD: ${dbCollection ? 'MongoDB activo' : 'Sin persistencia'}`);
   });
 }
 

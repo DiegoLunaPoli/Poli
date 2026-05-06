@@ -221,6 +221,68 @@ app.get('/api/solar', validarToken, (req, res) => {
 });
 
 // ─── RUTAS EXISTENTES ─────────────────────────────────────────────────────────
+
+// Promedios diarios — últimos N días (default 7)
+app.get('/api/history/daily', async (req, res) => {
+  const dias = Math.min(parseInt(req.query.dias) || 7, 90);
+  if (!dbCollection) return res.json([]);
+
+  try {
+    const config    = configModule.get();
+    const offsetUTC = config.ubicacion?.offsetUTC ?? -5;
+    const tzStr     = (offsetUTC >= 0 ? '+' : '-') +
+                      String(Math.abs(Math.floor(offsetUTC))).padStart(2,'0') + ':00';
+
+    const corte = new Date();
+    corte.setUTCDate(corte.getUTCDate() - dias);
+    corte.setUTCHours(0, 0, 0, 0);
+
+    const pipeline = [
+      { $match: { timestamp: { $gte: corte } } },
+      {
+        $group: {
+          _id: {
+            $dateToString: { format: '%Y-%m-%d', date: '$timestamp', timezone: tzStr }
+          },
+          voltaje:        { $avg: '$voltage'  },
+          corriente:      { $avg: '$current'  },
+          potencia:       { $avg: '$power'    },
+          potenciaMax:    { $max: '$power'    },
+          ldrTopLeft:     { $avg: '$ldr.topLeft'     },
+          ldrTopRight:    { $avg: '$ldr.topRight'    },
+          ldrBottomLeft:  { $avg: '$ldr.bottomLeft'  },
+          ldrBottomRight: { $avg: '$ldr.bottomRight' },
+          registros:      { $sum: 1 },
+        },
+      },
+      {
+        $addFields: {
+          ldrPromedio: { $avg: ['$ldrTopLeft','$ldrTopRight','$ldrBottomLeft','$ldrBottomRight'] }
+        },
+      },
+      {
+        $project: {
+          _id:         0,
+          fecha:       '$_id',
+          voltaje:     { $round: ['$voltaje',    2] },
+          corriente:   { $round: ['$corriente',  3] },
+          potencia:    { $round: ['$potencia',   3] },
+          potenciaMax: { $round: ['$potenciaMax',3] },
+          ldrPromedio: { $round: ['$ldrPromedio',1] },
+          registros:   1,
+        },
+      },
+      { $sort: { fecha: 1 } },
+    ];
+
+    const docs = await dbCollection.aggregate(pipeline).toArray();
+    res.json(docs);
+  } catch (err) {
+    console.error('Error en history/daily:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/api/history', async (req, res) => {
   const limit = Math.min(parseInt(req.query.limit) || 100, 1000);
   if (!dbCollection) return res.json([]);

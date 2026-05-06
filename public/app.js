@@ -26,6 +26,7 @@ class SolarTrackerDashboard {
         this.updateClock();
         this.setupLogSearch();
         this.loadHistoricalData();
+        this.cargarHistoricos();
         
         setInterval(() => this.updateClock(), 1000);
         setInterval(() => this.updateUptime(), 1000);
@@ -617,6 +618,193 @@ class SolarTrackerDashboard {
         console.log(`[${type.toUpperCase()}] ${message}`);
     }
 
+
+
+    // ══════════════════════════════════════════════════════════════════
+    // GEOCODIFICACIÓN INVERSA
+    // ══════════════════════════════════════════════════════════════════
+
+    async geocodificarUbicacion() {
+        const lat = parseFloat(document.getElementById('cfg-lat')?.value);
+        const lng = parseFloat(document.getElementById('cfg-lng')?.value);
+
+        if (isNaN(lat) || isNaN(lng)) return;
+        if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return;
+
+        const spinner  = document.getElementById('cfg-nombre-spinner');
+        const inputNombre = document.getElementById('cfg-nombre');
+        if (!inputNombre) return;
+
+        // Mostrar spinner
+        if (spinner) spinner.classList.remove('hidden');
+        inputNombre.value = 'Buscando...';
+
+        try {
+            const res  = await fetch(
+                `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=es`,
+                { headers: { 'User-Agent': 'SolarTracker/1.0' } }
+            );
+            const data = await res.json();
+
+            // Construir nombre legible desde los componentes de la dirección
+            const addr = data.address || {};
+            const partes = [
+                addr.city       || addr.town    || addr.village  || addr.municipality || '',
+                addr.state      || addr.region  || '',
+                addr.country    || '',
+            ].filter(Boolean);
+
+            inputNombre.value = partes.length ? partes.join(', ') : (data.display_name || `${lat}, ${lng}`);
+        } catch (e) {
+            inputNombre.value = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+            console.warn('Geocodificación falló:', e.message);
+        } finally {
+            if (spinner) spinner.classList.add('hidden');
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // HISTÓRICOS DIARIOS
+    // ══════════════════════════════════════════════════════════════════
+
+    async cargarHistoricos() {
+        const dias  = document.getElementById('historico-dias')?.value || 7;
+        const tbody = document.getElementById('historico-body');
+        if (!tbody) return;
+
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-6 text-gray-500">Cargando...</td></tr>';
+
+        try {
+            const res  = await fetch(`/api/history/daily?dias=${dias}`);
+            const data = await res.json();
+
+            if (!data.length) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center py-6 text-gray-500">Sin datos para este período.</td></tr>';
+                this._renderHistoricoChart([]);
+                return;
+            }
+
+            // Tabla
+            tbody.innerHTML = data.map(d => `
+                <tr class="hover:bg-cyber-accent/30 transition-colors border-b border-gray-800">
+                    <td class="py-2 px-3 text-gray-300 font-medium">${this._formatFecha(d.fecha)}</td>
+                    <td class="py-2 px-3 text-right text-neon-green">${d.voltaje?.toFixed(2) ?? '--'} V</td>
+                    <td class="py-2 px-3 text-right text-blue-400">${d.corriente?.toFixed(3) ?? '--'} A</td>
+                    <td class="py-2 px-3 text-right text-solar-gold">${d.potencia?.toFixed(3) ?? '--'} W</td>
+                    <td class="py-2 px-3 text-right text-orange-400">${d.potenciaMax?.toFixed(3) ?? '--'} W</td>
+                    <td class="py-2 px-3 text-right text-yellow-300">${d.ldrPromedio?.toFixed(1) ?? '--'}%</td>
+                    <td class="py-2 px-3 text-right text-gray-400">${d.registros ?? '--'}</td>
+                </tr>
+            `).join('');
+
+            // Gráfica
+            this._renderHistoricoChart(data);
+
+        } catch (e) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center py-6 text-red-400">Error cargando históricos.</td></tr>';
+            console.error('Error históricos:', e);
+        }
+    }
+
+    _formatFecha(fechaStr) {
+        // fechaStr viene como 'YYYY-MM-DD'
+        const [y, m, d] = fechaStr.split('-');
+        const meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+        return `${d} ${meses[parseInt(m)-1]} ${y}`;
+    }
+
+    _renderHistoricoChart(data) {
+        const el = document.getElementById('historico-chart');
+        if (!el) return;
+
+        if (this.charts.historico) {
+            this.charts.historico.destroy();
+            this.charts.historico = null;
+        }
+
+        if (!data.length) return;
+
+        const categorias  = data.map(d => d.fecha);
+        const voltajes    = data.map(d => parseFloat(d.voltaje?.toFixed(2))  ?? 0);
+        const potencias   = data.map(d => parseFloat(d.potencia?.toFixed(3)) ?? 0);
+        const potenciasMax= data.map(d => parseFloat(d.potenciaMax?.toFixed(3)) ?? 0);
+        const ldrs        = data.map(d => parseFloat(d.ldrPromedio?.toFixed(1)) ?? 0);
+
+        const options = {
+            series: [
+                { name: 'Voltaje prom. (V)',    data: voltajes     },
+                { name: 'Potencia prom. (W)',   data: potencias    },
+                { name: 'Potencia máx. (W)',    data: potenciasMax },
+                { name: 'Luz prom. (%)',        data: ldrs         },
+            ],
+            chart: {
+                height:      320,
+                type:        'line',
+                background:  'transparent',
+                toolbar:     { show: false },
+                animations:  { enabled: true, easing: 'easeinout', speed: 600 },
+            },
+            stroke:     { curve: 'smooth', width: [2, 2, 2, 2] },
+            markers:    { size: 4 },
+            xaxis: {
+                categories: categorias,
+                labels: {
+                    style:     { colors: '#9CA3AF', fontSize: '11px' },
+                    formatter: (val) => {
+                        if (!val) return '';
+                        const [y, m, d] = val.split('-');
+                        const meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+                        return `${d} ${meses[parseInt(m)-1]}`;
+                    }
+                },
+            },
+            yaxis: [
+                {
+                    title:  { text: 'Voltaje (V)', style: { color: '#39FF14' } },
+                    labels: { style: { colors: '#39FF14' }, formatter: v => v.toFixed(1) },
+                    min: 0,
+                },
+                {
+                    opposite: true,
+                    title:  { text: 'Potencia (W)', style: { color: '#FFD700' } },
+                    labels: { style: { colors: '#FFD700' }, formatter: v => v.toFixed(2) },
+                    min: 0,
+                },
+                { show: false },  // potenciaMax comparte eje potencia
+                {
+                    opposite: true,
+                    title:  { text: 'Luz (%)', style: { color: '#FDE68A' } },
+                    labels: { style: { colors: '#FDE68A' }, formatter: v => v.toFixed(0) + '%' },
+                    min: 0, max: 100,
+                },
+            ],
+            colors:  ['#39FF14', '#FFD700', '#F97316', '#FDE68A'],
+            fill: {
+                type:     'gradient',
+                gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.05 },
+            },
+            dataLabels: { enabled: false },
+            grid:       { borderColor: 'rgba(255,215,0,0.15)' },
+            legend: {
+                labels:   { colors: '#9CA3AF' },
+                position: 'top',
+            },
+            theme: { mode: 'dark' },
+            tooltip: {
+                theme: 'dark',
+                y: [
+                    { formatter: v => v.toFixed(2) + ' V'  },
+                    { formatter: v => v.toFixed(3) + ' W'  },
+                    { formatter: v => v.toFixed(3) + ' W'  },
+                    { formatter: v => v.toFixed(1) + '%'   },
+                ],
+            },
+        };
+
+        this.charts.historico = new ApexCharts(el, options);
+        this.charts.historico.render();
+    }
+
     // ══════════════════════════════════════════════════════════════════
     // ADMINISTRACIÓN
     // ══════════════════════════════════════════════════════════════════
@@ -720,6 +908,20 @@ class SolarTrackerDashboard {
             document.getElementById('cfg-lng').value    = cfg.ubicacion.lng    || '';
             document.getElementById('cfg-nombre').value = cfg.ubicacion.nombre || '';
             document.getElementById('cfg-offset').value = cfg.ubicacion.offsetUTC ?? -5;
+
+            // Si no hay nombre guardado, geocodificar automáticamente
+            if (!cfg.ubicacion.nombre && cfg.ubicacion.lat && cfg.ubicacion.lng) {
+                this.geocodificarUbicacion();
+            }
+        }
+
+        // Conectar eventos blur para geocodificación automática (una sola vez)
+        const latEl = document.getElementById('cfg-lat');
+        const lngEl = document.getElementById('cfg-lng');
+        if (latEl && !latEl.dataset.geoListenerAttached) {
+            latEl.addEventListener('blur', () => this.geocodificarUbicacion());
+            lngEl.addEventListener('blur', () => this.geocodificarUbicacion());
+            latEl.dataset.geoListenerAttached = 'true';
         }
         // LDR
         if (cfg.modos?.ldr) {

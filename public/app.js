@@ -320,13 +320,19 @@ class SolarTrackerDashboard {
     }
 
     updateDashboard(data) {
-        // ── LDR — campos que envía server.js: topLeft, topRight, bottomLeft, bottomRight ──
-        document.getElementById('ldr-tl').textContent = `${Math.round(data.ldr.topLeft)}%`;
-        document.getElementById('ldr-tr').textContent = `${Math.round(data.ldr.topRight)}%`;
-        document.getElementById('ldr-bl').textContent = `${Math.round(data.ldr.bottomLeft)}%`;
-        document.getElementById('ldr-br').textContent = `${Math.round(data.ldr.bottomRight)}%`;
+        // ── LDR — el ESP32 ya envía valores en porcentaje (0–100%)
+        // server.js los mapea: supIzq→topLeft, supDer→topRight, infIzq→bottomLeft, infDer→bottomRight
+        const ldrTL = parseFloat(data.ldr.topLeft).toFixed(1);
+        const ldrTR = parseFloat(data.ldr.topRight).toFixed(1);
+        const ldrBL = parseFloat(data.ldr.bottomLeft).toFixed(1);
+        const ldrBR = parseFloat(data.ldr.bottomRight).toFixed(1);
 
-        // Update Radar Chart
+        document.getElementById('ldr-tl').textContent = `${ldrTL}%`;
+        document.getElementById('ldr-tr').textContent = `${ldrTR}%`;
+        document.getElementById('ldr-bl').textContent = `${ldrBL}%`;
+        document.getElementById('ldr-br').textContent = `${ldrBR}%`;
+
+        // Radar Chart — valores ya en porcentaje, sin conversión
         this.charts.radar.updateSeries([{
             name: 'Intensidad de Luz (%)',
             data: [
@@ -337,15 +343,42 @@ class SolarTrackerDashboard {
             ]
         }]);
 
-        // ── Servo Telemetría ──
-        const azimuthPercent   = (data.azimuth  / 180) * 100;
-        const elevationPercent = (data.elevation /  65) * 100;  // máx físico calibrado: 65°
+        // ── Servo Telemetría — conversión de señal cruda a grados físicos ──
+        //
+        // servoInclinacion crudo → grados de elevación física:
+        //   crudo > 34  →  (crudo - 34) × 90 / 34
+        //   crudo < 34  →  crudo × 90 / 34
+        //   crudo = 34  →  0°  (posición horizontal / centro)
+        //
+        // servoAzimut crudo → grados de azimut físico:
+        //   modo normal   (inclinacion >= 34)  →  crudo (0–180°)
+        //   modo volteado (inclinacion <  34)  →  (crudo + 180) % 360
+        //
+        const crudeInclinacion = data.elevation; // server.js mapea servo.inclinacion → elevation
+        const crudeAzimut      = data.azimuth;   // server.js mapea servo.azimut      → azimuth
+
+        let elevacionGrados;
+        if (crudeInclinacion > 34) {
+            elevacionGrados = (crudeInclinacion - 34) * 90 / 34;
+        } else if (crudeInclinacion < 34) {
+            elevacionGrados = crudeInclinacion * 90 / 34;
+        } else {
+            elevacionGrados = 0;
+        }
+
+        const azimutGrados = crudeInclinacion >= 34
+            ? crudeAzimut
+            : (crudeAzimut + 180) % 360;
+
+        // El gauge radialBar espera un porcentaje (0–100)
+        const elevationPercent = Math.min(100, Math.abs(elevacionGrados) / 90 * 100);
+        const azimuthPercent   = (azimutGrados / 360) * 100;
 
         this.charts.azimuth.updateSeries([azimuthPercent]);
         this.charts.elevation.updateSeries([elevationPercent]);
-        
-        document.getElementById('azimuth-value').textContent = `${data.azimuth}°`;
-        document.getElementById('elevation-value').textContent = `${data.elevation}°`;
+
+        document.getElementById('azimuth-value').textContent   = `${azimutGrados.toFixed(1)}°`;
+        document.getElementById('elevation-value').textContent = `${elevacionGrados.toFixed(1)}°`;
 
         // ── Posición solar (solo si viene del simulador) ──
         if (data.sunPosition) {
@@ -514,12 +547,12 @@ class SolarTrackerDashboard {
     }
 
     updateClock() {
-        const now = new Date();
-        document.getElementById('current-time').textContent = now.toLocaleTimeString('es-ES', { hour12: false });
-        document.getElementById('current-date').textContent = now.toLocaleDateString('es-ES', {
+        const now     = new Date();
+        const timeStr = now.toLocaleTimeString('es-ES', { hour12: false });
+        const dateStr = now.toLocaleDateString('es-ES', {
             year: 'numeric', month: 'short', day: 'numeric'
         });
-        
+
         document.getElementById('current-time').textContent = timeStr;
         document.getElementById('current-date').textContent = dateStr;
     }

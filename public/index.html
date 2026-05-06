@@ -146,6 +146,22 @@
                     CAMBIAR VISTA
                 </button>
             </div>
+
+            <!-- Modo activo badge -->
+            <div class="mt-4 pt-4 border-t border-gray-700">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="text-sm font-bold text-gray-400">MODO</h3>
+                    <span id="modo-badge" class="text-xs font-bold px-2 py-1 rounded-full bg-solar-gold/20 text-solar-gold">LDR</span>
+                </div>
+            </div>
+
+            <!-- Botón Administración -->
+            <div class="mt-2">
+                <button id="btn-admin" onclick="window.dashboard.abrirAdmin()" class="w-full bg-cyber-accent border border-solar-gold/30 text-solar-gold font-bold py-2 px-4 rounded-lg hover:bg-solar-gold/10 transition-all duration-300 text-sm flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/></svg>
+                    ADMINISTRACIÓN
+                </button>
+            </div>
         </aside>
 
         <!-- Main Content Area -->
@@ -304,5 +320,176 @@
     </div>
 
     <script src="app.js"></script>
+    <!-- ══════════════════════════════════════════════════════════════════
+         MODAL ADMINISTRACIÓN
+    ═══════════════════════════════════════════════════════════════════ -->
+    <div id="modal-admin" class="fixed inset-0 z-[9999] hidden items-center justify-center bg-black/70 backdrop-blur-sm">
+        <div class="w-full max-w-2xl mx-4 glass-panel border border-solar-gold/30 rounded-2xl shadow-2xl shadow-solar-gold/10 max-h-[90vh] overflow-y-auto">
+
+            <!-- Header modal -->
+            <div class="flex items-center justify-between p-6 border-b border-gray-700">
+                <h2 class="text-xl font-bold text-solar-gold flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/></svg>
+                    Panel de Administración
+                </h2>
+                <button onclick="window.dashboard.cerrarAdmin()" class="text-gray-400 hover:text-white transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            <!-- ── SECCIÓN LOGIN ── -->
+            <div id="admin-login-section" class="p-6">
+                <p class="text-gray-400 text-sm mb-6 text-center">Ingresa tus credenciales para acceder al panel de configuración.</p>
+                <div class="space-y-4 max-w-sm mx-auto">
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">Usuario</label>
+                        <input id="admin-usuario" type="text" placeholder="admin"
+                            class="w-full bg-cyber-accent border border-gray-600 rounded-lg px-4 py-2 text-white text-sm focus:border-solar-gold focus:outline-none transition-colors"/>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">Contraseña</label>
+                        <input id="admin-password" type="password" placeholder="••••••••"
+                            class="w-full bg-cyber-accent border border-gray-600 rounded-lg px-4 py-2 text-white text-sm focus:border-solar-gold focus:outline-none transition-colors"/>
+                    </div>
+                    <p id="admin-login-error" class="text-red-400 text-xs hidden"></p>
+                    <button onclick="window.dashboard.adminLogin()"
+                        class="w-full bg-gradient-to-r from-solar-gold to-orange-500 text-cyber-dark font-bold py-2 px-4 rounded-lg hover:shadow-lg hover:shadow-solar-gold/30 transition-all text-sm">
+                        INICIAR SESIÓN
+                    </button>
+                </div>
+            </div>
+
+            <!-- ── SECCIÓN CONFIG (visible tras login) ── -->
+            <div id="admin-config-section" class="hidden p-6 space-y-6">
+
+                <!-- Usuario logueado -->
+                <div class="flex items-center justify-between bg-neon-green/10 border border-neon-green/30 rounded-lg px-4 py-2">
+                    <span class="text-neon-green text-sm font-bold">✓ Sesión activa: <span id="admin-usuario-label"></span></span>
+                    <button onclick="window.dashboard.adminLogout()" class="text-xs text-gray-400 hover:text-red-400 transition-colors">Cerrar sesión</button>
+                </div>
+
+                <!-- Modo de operación -->
+                <div class="glass-panel rounded-xl p-4 border border-gray-700">
+                    <h3 class="text-sm font-bold text-solar-gold mb-3">MODO DE OPERACIÓN</h3>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button onclick="window.dashboard.cambiarModo('ldr')" id="btn-modo-ldr"
+                            class="modo-btn py-2 px-3 rounded-lg text-xs font-bold border transition-all border-solar-gold bg-solar-gold/20 text-solar-gold">
+                            📡 LDR
+                        </button>
+                        <button onclick="window.dashboard.cambiarModo('astronomico')" id="btn-modo-astronomico"
+                            class="modo-btn py-2 px-3 rounded-lg text-xs font-bold border transition-all border-gray-600 text-gray-400 hover:border-solar-gold/50">
+                            🌍 Astronómico
+                        </button>
+                        <button onclick="window.dashboard.cambiarModo('manual')" id="btn-modo-manual"
+                            class="modo-btn py-2 px-3 rounded-lg text-xs font-bold border transition-all border-gray-600 text-gray-400 hover:border-solar-gold/50">
+                            🕹️ Manual
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Control manual (visible solo en modo manual) -->
+                <div id="control-manual" class="glass-panel rounded-xl p-4 border border-gray-700 hidden">
+                    <h3 class="text-sm font-bold text-solar-gold mb-3">CONTROL MANUAL</h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">Inclinación (pasos)</label>
+                            <input id="manual-inclinacion" type="number" value="0" min="-10" max="10"
+                                class="w-full bg-cyber-accent border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:border-solar-gold focus:outline-none"/>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">Azimut (pasos)</label>
+                            <input id="manual-azimut" type="number" value="0" min="-10" max="10"
+                                class="w-full bg-cyber-accent border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:border-solar-gold focus:outline-none"/>
+                        </div>
+                    </div>
+                    <button onclick="window.dashboard.enviarComandoManual()"
+                        class="mt-3 w-full bg-cyber-accent border border-solar-gold/30 text-solar-gold font-bold py-2 rounded-lg hover:bg-solar-gold/10 transition-all text-sm">
+                        ENVIAR COMANDO
+                    </button>
+                </div>
+
+                <!-- Ubicación -->
+                <div class="glass-panel rounded-xl p-4 border border-gray-700">
+                    <h3 class="text-sm font-bold text-solar-gold mb-3">UBICACIÓN DEL PANEL</h3>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">Latitud</label>
+                            <input id="cfg-lat" type="number" step="0.0001" placeholder="4.5709"
+                                class="w-full bg-cyber-accent border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:border-solar-gold focus:outline-none"/>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">Longitud</label>
+                            <input id="cfg-lng" type="number" step="0.0001" placeholder="-74.2973"
+                                class="w-full bg-cyber-accent border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:border-solar-gold focus:outline-none"/>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">Nombre del lugar</label>
+                            <input id="cfg-nombre" type="text" placeholder="Soacha, Cundinamarca"
+                                class="w-full bg-cyber-accent border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:border-solar-gold focus:outline-none col-span-1"/>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">Offset UTC</label>
+                            <input id="cfg-offset" type="number" step="1" placeholder="-5"
+                                class="w-full bg-cyber-accent border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:border-solar-gold focus:outline-none"/>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Config LDR -->
+                <div class="glass-panel rounded-xl p-4 border border-gray-700">
+                    <h3 class="text-sm font-bold text-solar-gold mb-3">PARÁMETROS LDR</h3>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">Zona muerta (%)</label>
+                            <input id="cfg-zona-muerta" type="number" step="1" min="1" max="50" placeholder="10"
+                                class="w-full bg-cyber-accent border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:border-solar-gold focus:outline-none"/>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">Intervalo (ms)</label>
+                            <input id="cfg-intervalo" type="number" step="50" min="100" placeholder="300"
+                                class="w-full bg-cyber-accent border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:border-solar-gold focus:outline-none"/>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">Paso máximo</label>
+                            <input id="cfg-paso-max" type="number" step="1" min="1" max="10" placeholder="3"
+                                class="w-full bg-cyber-accent border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:border-solar-gold focus:outline-none"/>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cambiar contraseña -->
+                <div class="glass-panel rounded-xl p-4 border border-gray-700">
+                    <h3 class="text-sm font-bold text-solar-gold mb-3">CAMBIAR CONTRASEÑA</h3>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">Nueva contraseña</label>
+                            <input id="cfg-nueva-pass" type="password" placeholder="••••••••"
+                                class="w-full bg-cyber-accent border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:border-solar-gold focus:outline-none"/>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">Confirmar</label>
+                            <input id="cfg-confirma-pass" type="password" placeholder="••••••••"
+                                class="w-full bg-cyber-accent border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:border-solar-gold focus:outline-none"/>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Botones guardar -->
+                <div class="flex gap-3">
+                    <button onclick="window.dashboard.guardarConfig()"
+                        class="flex-1 bg-gradient-to-r from-solar-gold to-orange-500 text-cyber-dark font-bold py-2 px-4 rounded-lg hover:shadow-lg hover:shadow-solar-gold/30 transition-all text-sm">
+                        GUARDAR CONFIGURACIÓN
+                    </button>
+                    <button onclick="window.dashboard.cerrarAdmin()"
+                        class="px-4 py-2 border border-gray-600 text-gray-400 rounded-lg hover:border-gray-400 transition-all text-sm">
+                        Cancelar
+                    </button>
+                </div>
+
+                <p id="admin-save-msg" class="text-center text-xs hidden"></p>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>

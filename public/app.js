@@ -45,6 +45,23 @@ class SolarTrackerDashboard {
         this.socket.on('initial-data', (data) => {
             console.log('📍 Datos iniciales recibidos:', data);
             this.initializeMap(data.location);
+            if (data.modoActivo) this._actualizarModoBadge(data.modoActivo);
+        });
+
+        this.socket.on('location-updated', (ubicacion) => {
+            if (this.map && this.marker && ubicacion.lat && ubicacion.lng) {
+                const latlng = [ubicacion.lat, ubicacion.lng];
+                this.marker.setLatLng(latlng);
+                this.map.setView(latlng, 13);
+                document.getElementById('location-lat').textContent  = ubicacion.lat.toFixed(4);
+                document.getElementById('location-lng').textContent  = ubicacion.lng.toFixed(4);
+                document.getElementById('location-name').textContent = ubicacion.nombre || '';
+            }
+        });
+
+        this.socket.on('modo-changed', (data) => {
+            this._actualizarModoBadge(data.modo);
+            this._actualizarBotonesModo(data.modo);
         });
 
         this.socket.on('sensor-data', (data) => {
@@ -598,6 +615,252 @@ class SolarTrackerDashboard {
     showNotification(message, type = 'info') {
         // Simple notification system
         console.log(`[${type.toUpperCase()}] ${message}`);
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // ADMINISTRACIÓN
+    // ══════════════════════════════════════════════════════════════════
+
+    abrirAdmin() {
+        const modal = document.getElementById('modal-admin');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+
+        // Si ya hay token en sesión, ir directo a config
+        const token = sessionStorage.getItem('adminToken');
+        if (token) {
+            this._cargarConfigAdmin(token);
+        }
+    }
+
+    cerrarAdmin() {
+        const modal = document.getElementById('modal-admin');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+
+    async adminLogin() {
+        const usuario  = document.getElementById('admin-usuario').value.trim();
+        const password = document.getElementById('admin-password').value;
+        const errorEl  = document.getElementById('admin-login-error');
+
+        errorEl.classList.add('hidden');
+
+        if (!usuario || !password) {
+            errorEl.textContent = 'Completa usuario y contraseña.';
+            errorEl.classList.remove('hidden');
+            return;
+        }
+
+        try {
+            const res  = await fetch('/api/admin/login', {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({ usuario, password }),
+            });
+            const data = await res.json();
+
+            if (data.ok) {
+                sessionStorage.setItem('adminToken', data.token);
+                sessionStorage.setItem('adminUsuario', usuario);
+                document.getElementById('admin-password').value = '';
+                this._cargarConfigAdmin(data.token);
+            } else {
+                errorEl.textContent = data.error || 'Credenciales incorrectas.';
+                errorEl.classList.remove('hidden');
+            }
+        } catch (e) {
+            errorEl.textContent = 'Error de conexión con el servidor.';
+            errorEl.classList.remove('hidden');
+        }
+    }
+
+    async adminLogout() {
+        const token = sessionStorage.getItem('adminToken');
+        if (token) {
+            await fetch('/api/admin/logout', {
+                method:  'POST',
+                headers: { 'x-admin-token': token },
+            }).catch(() => {});
+        }
+        sessionStorage.removeItem('adminToken');
+        sessionStorage.removeItem('adminUsuario');
+        document.getElementById('admin-login-section').classList.remove('hidden');
+        document.getElementById('admin-config-section').classList.add('hidden');
+    }
+
+    async _cargarConfigAdmin(token) {
+        try {
+            const res  = await fetch('/api/admin/config', {
+                headers: { 'x-admin-token': token },
+            });
+
+            if (res.status === 401) {
+                sessionStorage.removeItem('adminToken');
+                return;
+            }
+
+            const cfg = await res.json();
+            this._rellenarFormAdmin(cfg);
+
+            document.getElementById('admin-usuario-label').textContent =
+                sessionStorage.getItem('adminUsuario') || cfg.credenciales?.usuario || 'admin';
+            document.getElementById('admin-login-section').classList.add('hidden');
+            document.getElementById('admin-config-section').classList.remove('hidden');
+
+        } catch (e) {
+            console.error('Error cargando config admin:', e);
+        }
+    }
+
+    _rellenarFormAdmin(cfg) {
+        // Ubicación
+        if (cfg.ubicacion) {
+            document.getElementById('cfg-lat').value    = cfg.ubicacion.lat    || '';
+            document.getElementById('cfg-lng').value    = cfg.ubicacion.lng    || '';
+            document.getElementById('cfg-nombre').value = cfg.ubicacion.nombre || '';
+            document.getElementById('cfg-offset').value = cfg.ubicacion.offsetUTC ?? -5;
+        }
+        // LDR
+        if (cfg.modos?.ldr) {
+            const ldr = cfg.modos.ldr;
+            document.getElementById('cfg-zona-muerta').value = Math.round((ldr.zonaMuertaPct || 0.10) * 100);
+            document.getElementById('cfg-intervalo').value   = ldr.intervaloMs || 300;
+            document.getElementById('cfg-paso-max').value    = ldr.pasoMax     || 3;
+        }
+        // Modo activo
+        if (cfg.modos?.activo) {
+            this._actualizarBotonesModo(cfg.modos.activo);
+        }
+    }
+
+    async cambiarModo(modo) {
+        const token = sessionStorage.getItem('adminToken');
+        if (!token) return;
+
+        try {
+            const res  = await fetch('/api/admin/modo', {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+                body:    JSON.stringify({ modo }),
+            });
+            const data = await res.json();
+            if (data.ok) {
+                this._actualizarBotonesModo(modo);
+                this._actualizarModoBadge(modo);
+                // Mostrar/ocultar control manual
+                const controlManual = document.getElementById('control-manual');
+                controlManual.classList.toggle('hidden', modo !== 'manual');
+            }
+        } catch (e) {
+            console.error('Error cambiando modo:', e);
+        }
+    }
+
+    _actualizarBotonesModo(modo) {
+        ['ldr', 'astronomico', 'manual'].forEach(m => {
+            const btn = document.getElementById(`btn-modo-${m}`);
+            if (!btn) return;
+            if (m === modo) {
+                btn.className = 'modo-btn py-2 px-3 rounded-lg text-xs font-bold border transition-all border-solar-gold bg-solar-gold/20 text-solar-gold';
+            } else {
+                btn.className = 'modo-btn py-2 px-3 rounded-lg text-xs font-bold border transition-all border-gray-600 text-gray-400 hover:border-solar-gold/50';
+            }
+        });
+        // Control manual
+        const controlManual = document.getElementById('control-manual');
+        if (controlManual) controlManual.classList.toggle('hidden', modo !== 'manual');
+    }
+
+    _actualizarModoBadge(modo) {
+        const badge = document.getElementById('modo-badge');
+        if (!badge) return;
+        const labels = { ldr: 'LDR', astronomico: 'ASTRONÓMICO', manual: 'MANUAL' };
+        badge.textContent = labels[modo] || modo.toUpperCase();
+    }
+
+    async enviarComandoManual() {
+        const token = sessionStorage.getItem('adminToken');
+        if (!token) return;
+
+        const inclinacion = parseInt(document.getElementById('manual-inclinacion').value) || 0;
+        const azimut      = parseInt(document.getElementById('manual-azimut').value)      || 0;
+
+        try {
+            await fetch('/api/admin/manual', {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+                body:    JSON.stringify({ inclinacion, azimut }),
+            });
+            document.getElementById('manual-inclinacion').value = 0;
+            document.getElementById('manual-azimut').value      = 0;
+        } catch (e) {
+            console.error('Error enviando comando manual:', e);
+        }
+    }
+
+    async guardarConfig() {
+        const token  = sessionStorage.getItem('adminToken');
+        const msgEl  = document.getElementById('admin-save-msg');
+        if (!token) return;
+
+        const nuevaPass     = document.getElementById('cfg-nueva-pass').value;
+        const confirmaPass  = document.getElementById('cfg-confirma-pass').value;
+
+        if (nuevaPass && nuevaPass !== confirmaPass) {
+            msgEl.textContent  = '❌ Las contraseñas no coinciden.';
+            msgEl.className    = 'text-center text-xs text-red-400';
+            msgEl.classList.remove('hidden');
+            return;
+        }
+
+        const payload = {
+            ubicacion: {
+                lat:         parseFloat(document.getElementById('cfg-lat').value)    || 4.5709,
+                lng:         parseFloat(document.getElementById('cfg-lng').value)    || -74.2973,
+                nombre:      document.getElementById('cfg-nombre').value             || 'Soacha, Cundinamarca',
+                zonaHoraria: 'America/Bogota',
+                offsetUTC:   parseInt(document.getElementById('cfg-offset').value)   ?? -5,
+            },
+            modos: {
+                ldr: {
+                    zonaMuertaPct: (parseInt(document.getElementById('cfg-zona-muerta').value) || 10) / 100,
+                    intervaloMs:   parseInt(document.getElementById('cfg-intervalo').value)   || 300,
+                    pasoMax:       parseInt(document.getElementById('cfg-paso-max').value)    || 3,
+                },
+            },
+        };
+
+        if (nuevaPass) {
+            payload.credenciales = {
+                usuario:       sessionStorage.getItem('adminUsuario') || 'admin',
+                passwordPlain: nuevaPass,
+            };
+        }
+
+        try {
+            const res  = await fetch('/api/admin/config', {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+                body:    JSON.stringify(payload),
+            });
+            const data = await res.json();
+
+            if (data.ok) {
+                msgEl.textContent = '✓ Configuración guardada correctamente.';
+                msgEl.className   = 'text-center text-xs text-neon-green';
+                msgEl.classList.remove('hidden');
+                document.getElementById('cfg-nueva-pass').value   = '';
+                document.getElementById('cfg-confirma-pass').value = '';
+                setTimeout(() => msgEl.classList.add('hidden'), 3000);
+            } else {
+                throw new Error(data.error);
+            }
+        } catch (e) {
+            msgEl.textContent = `❌ Error: ${e.message}`;
+            msgEl.className   = 'text-center text-xs text-red-400';
+            msgEl.classList.remove('hidden');
+        }
     }
 }
 
